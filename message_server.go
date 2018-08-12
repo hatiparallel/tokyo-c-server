@@ -1,8 +1,8 @@
 package main
 
 import (
-	"fmt"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"strings"
@@ -25,7 +25,7 @@ func (server *MessageServer) ServeHTTP(writer http.ResponseWriter, request *http
 		return
 	}
 
-	channel := request.URL.Path[last_slash_index + 1:]
+	channel := request.URL.Path[last_slash_index+1:]
 
 	if channel == "" {
 		writer.WriteHeader(401)
@@ -51,7 +51,7 @@ func (server *MessageServer) ServeHTTP(writer http.ResponseWriter, request *http
 		defer server.listeners.Unsubscribe(listener)
 
 		for {
-			if  payload, err := json.Marshal(<-listener); err == nil {
+			if payload, err := json.Marshal(<-listener); err == nil {
 				fmt.Fprintf(writer, "%s\n", payload)
 			}
 
@@ -65,9 +65,9 @@ func (server *MessageServer) ServeHTTP(writer http.ResponseWriter, request *http
 		}
 
 		var (
-			err       error
-			buffer    []byte
-			message   Message
+			err     error
+			buffer  []byte
+			message Message
 		)
 
 		if buffer, err = ioutil.ReadAll(request.Body); err != nil {

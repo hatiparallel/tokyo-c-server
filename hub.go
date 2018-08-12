@@ -10,9 +10,8 @@ type Message struct {
 	Posted int
 }
 
-
 type Hub struct {
-	mutex *sync.RWMutex
+	mutex     *sync.RWMutex
 	listeners map[chan Message]string
 }
 
@@ -46,4 +45,3 @@ func (hub *Hub) Unsubscribe(listener chan Message) {
 	defer hub.mutex.Unlock()
 	delete(hub.listeners, listener)
 }
-

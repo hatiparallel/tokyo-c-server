@@ -10,25 +10,24 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 )
 
-
 func main() {
 	var (
-		port int
+		port    int
 		pidfile string
 	)
 
 	flag.IntVar(&port, "port", 80, "specifies port number to be binded")
 	flag.StringVar(&pidfile, "pidfile", "/tmp/tokyo-c.pid", "specifies path to pidfile")
-	
+
 	flag.Parse()
 
-	http.HandleFunc("/", func (writer http.ResponseWriter, request *http.Request) {
+	http.HandleFunc("/", func(writer http.ResponseWriter, request *http.Request) {
 		fmt.Fprintln(writer, "Hello, this is Tokyo C Server. It works!")
 	})
 
 	http.Handle("/messages/", NewMessageServer())
 
-	if file, err :=  os.OpenFile(pidfile, os.O_WRONLY | os.O_CREATE | os.O_TRUNC, 0755); err == nil {
+	if file, err := os.OpenFile(pidfile, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0755); err == nil {
 		fmt.Fprintf(file, "%d\n", os.Getpid())
 		file.Close()
 	} else {
@@ -36,7 +35,7 @@ func main() {
 		return
 	}
 
-	if err := http.ListenAndServe(":" + strconv.Itoa(port), nil); err != nil {
+	if err := http.ListenAndServe(":"+strconv.Itoa(port), nil); err != nil {
 		fmt.Fprintln(os.Stderr, err.Error())
 	}
 }
