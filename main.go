@@ -22,6 +22,10 @@ func main() {
 	
 	flag.Parse()
 
+	http.HandleFunc("/", func (writer http.ResponseWriter, request *http.Request) {
+		fmt.Fprintln(writer, "Tokyo C Server")
+	})
+
 	http.Handle("/messages/", NewMessageServer())
 
 	if file, err :=  os.OpenFile(pidfile, os.O_WRONLY | os.O_CREATE | os.O_TRUNC, 0755); err == nil {
