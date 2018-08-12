@@ -23,7 +23,7 @@ func main() {
 	flag.Parse()
 
 	http.HandleFunc("/", func (writer http.ResponseWriter, request *http.Request) {
-		fmt.Fprintln(writer, "Tokyo C Server")
+		fmt.Fprintln(writer, "Hello, this is Tokyo C Server. It works!")
 	})
 
 	http.Handle("/messages/", NewMessageServer())
