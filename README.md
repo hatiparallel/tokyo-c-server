@@ -2,7 +2,7 @@
 
 ## Establish a Server
 
-Execute `sudo go run server.go` and you have an endpoint at `http://localhost/messages`.
+Execute `sudo go run *.go` and you have an endpoint at `http://localhost/messages`.
 
 ## Make a Listen
 Just execute
