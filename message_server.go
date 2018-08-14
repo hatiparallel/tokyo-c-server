@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"strconv"
 	"strings"
 )
 
@@ -25,11 +26,16 @@ func (server *MessageServer) ServeHTTP(writer http.ResponseWriter, request *http
 		return
 	}
 
-	channel := request.URL.Path[last_slash_index+1:]
+	channel_string := request.URL.Path[last_slash_index+1:]
 
-	if channel == "" {
+	var (
+		channel int
+		err error
+	)
+
+	if channel, err = strconv.Atoi(channel_string); err != nil {
 		writer.WriteHeader(401)
-		fmt.Fprintln(writer, "channel name must be designated")
+		fmt.Fprintln(writer, "invalid channel name")
 		return
 	}
 
@@ -46,7 +52,9 @@ func (server *MessageServer) ServeHTTP(writer http.ResponseWriter, request *http
 			return
 		}
 
-		listener := server.listeners.Subscribe(channel)
+		listener := make(chan Message)
+		
+		server.listeners.Subscribe(channel, listener)
 
 		defer server.listeners.Unsubscribe(listener)
 

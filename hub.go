@@ -10,8 +10,8 @@ const (
 )
 
 type Message struct {
-	Id uint
-	Author uint
+	Id int
+	Author int
 	Type int
 	PostedAt time.Time
 	Content string
@@ -19,24 +19,23 @@ type Message struct {
 
 type Hub struct {
 	mutex     *sync.RWMutex
-	listeners map[chan Message]string
+	listeners map[chan Message]int
 }
 
 func NewHub() *Hub {
-	return &Hub{new(sync.RWMutex), make(map[chan Message]string)}
+	return &Hub{new(sync.RWMutex), make(map[chan Message]int)}
 }
 
-func (hub *Hub) Subscribe(channel string) (listener chan Message) {
+func (hub *Hub) Subscribe(channel int, listener chan Message) {
 	hub.mutex.Lock()
 	defer hub.mutex.Unlock()
 
-	listener = make(chan Message)
 	hub.listeners[listener] = channel
 
 	return
 }
 
-func (hub *Hub) Publish(channel string, message Message) {
+func (hub *Hub) Publish(channel int, message Message) {
 	hub.mutex.RLock()
 	defer hub.mutex.RUnlock()
 
