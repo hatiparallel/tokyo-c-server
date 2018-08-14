@@ -2,12 +2,19 @@ package main
 
 import (
 	"sync"
+	"time"
+)
+
+const (
+	MESSAGE_TYPE_TEXT = iota
 )
 
 type Message struct {
-	User   int
-	Text   string
-	Posted int
+	Id uint
+	Author uint
+	Type int
+	PostedAt time.Time
+	Content string
 }
 
 type Hub struct {
