@@ -10,17 +10,17 @@ const (
 )
 
 type Message struct {
-	Id int
-	Author int
-	Type int
+	Id       int
+	Author   int
+	Type     int
 	PostedAt time.Time
-	Content string
+	Content  string
 }
 
 type Hub struct {
 	mutex     *sync.RWMutex
 	listeners map[chan Message]int
-	journal chan Message
+	journal   chan Message
 }
 
 func NewHub(journal chan Message) *Hub {

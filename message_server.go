@@ -30,7 +30,7 @@ func (server *MessageServer) ServeHTTP(writer http.ResponseWriter, request *http
 
 	var (
 		channel int
-		err error
+		err     error
 	)
 
 	if channel, err = strconv.Atoi(channel_string); err != nil {
@@ -53,7 +53,7 @@ func (server *MessageServer) ServeHTTP(writer http.ResponseWriter, request *http
 		}
 
 		listener := make(chan Message)
-		
+
 		server.listeners.Subscribe(channel, listener)
 
 		defer server.listeners.Unsubscribe(listener)
