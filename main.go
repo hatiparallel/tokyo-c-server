@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"time"
 
 	_ "github.com/go-sql-driver/mysql"
 )
@@ -21,19 +22,21 @@ func main() {
 
 	flag.Parse()
 
-	journal := make(chan Message)
-
-	go func() {
-		for message := range journal {
-			fmt.Println(message.Content)
-		}
-	}()
-
 	http.HandleFunc("/", func(writer http.ResponseWriter, request *http.Request) {
 		fmt.Fprintln(writer, "Hello, this is Tokyo C Server. It works!")
 	})
 
-	http.Handle("/messages/", NewMessageServer(journal))
+	http.Handle("/stream/", NewMessageServer(func(message Message) error {
+		posted_at := time.Now()
+
+		message["PostedAt"] = posted_at
+
+		if content, ok := message["Content"].(string); ok {
+			fmt.Println(content)
+		}
+
+		return nil
+	}))
 
 	if file, err := os.OpenFile(pidfile, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0755); err == nil {
 		fmt.Fprintf(file, "%d\n", os.Getpid())

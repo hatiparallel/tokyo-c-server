@@ -1,0 +1,42 @@
+#!/bin/bash
+
+source .env
+
+database_name="tokyo-c_`date +%Y%m%d`"
+
+echo -n "Installing database ${database_name}...  "
+
+mysql -u "${TOKYO_C_DATABASE_USER}" -h "${TOKYO_C_DATABASE_HOST}" <<EOS
+CREATE DATABASE ${database_name};
+USE ${database_name};
+
+CREATE TABLE messages (
+        id INT PRIMARY KEY AUTO_INCREMENT,
+        channel INT,
+        author INT,
+        category INT,
+        posted_at DATETIME,
+        content VARCHAR(4096),
+        INDEX(channel)
+);
+
+CREATE TABLE channels (
+        id INT PRIMARY KEY AUTO_INCREMENT,
+        name VARCHAR(256)
+);
+
+CREATE TABLE participations (
+        person INT,
+        channel INT,
+        UNIQUE(person, channel),
+        INDEX(person, channel)
+);
+
+CREATE TABLE people (
+        id INT PRIMARY KEY AUTO_INCREMENT,
+        name VARCHAR(128),
+        token VARCHAR(1024)
+);
+EOS
+
+echo "complete"

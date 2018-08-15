@@ -10,9 +10,9 @@ Execute `~/bin/tokyo-c-server -port 9000` and you have an endpoint at `http://lo
 
 ## Make a Listen
 Just execute
-`curl http://localhost:9000/messages/groupname`.
+`curl http://localhost:9000/stream/groupname`.
 
 ## Publish a Message
 
 JSON messages will be accepted:
-`curl -X POST -H'Content-Type: application/json' -d '{"Text":"Hello, world!"}' http://localhost:9000/messages/groupname`.
+`curl -X POST -H'Content-Type: application/json' -d '{"Text":"Hello, world!"}' http://localhost:9000/stream/groupname`.

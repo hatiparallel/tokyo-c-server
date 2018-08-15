@@ -2,33 +2,26 @@ package main
 
 import (
 	"sync"
-	"time"
 )
 
-const (
-	MESSAGE_TYPE_TEXT = iota
-)
-
-type Message struct {
-	Id       int
-	Author   int
-	Type     int
-	PostedAt time.Time
-	Content  string
-}
+type Message map[string]interface{}
 
 type Hub struct {
 	mutex     *sync.RWMutex
 	listeners map[chan Message]int
-	journal   chan Message
+	stamper   func(Message) error
 }
 
-func NewHub(journal chan Message) *Hub {
+func NewHub(stamper func(Message) error) *Hub {
 	return &Hub{
 		new(sync.RWMutex),
 		make(map[chan Message]int),
-		journal,
+		stamper,
 	}
+}
+
+func (hub *Hub) Stamp(message Message) error {
+	return hub.stamper(message)
 }
 
 func (hub *Hub) Subscribe(channel int, listener chan Message) {
@@ -40,12 +33,14 @@ func (hub *Hub) Subscribe(channel int, listener chan Message) {
 	return
 }
 
-func (hub *Hub) Publish(channel int, message Message) {
+func (hub *Hub) Publish(channel int, message Message) (err error) {
 	hub.mutex.RLock()
 	defer hub.mutex.RUnlock()
 
-	if hub.journal != nil {
-		hub.journal <- message
+	err = hub.Stamp(message)
+
+	if err != nil {
+		return err
 	}
 
 	for listener, _channel := range hub.listeners {
@@ -53,6 +48,8 @@ func (hub *Hub) Publish(channel int, message Message) {
 			listener <- message
 		}
 	}
+
+	return
 }
 
 func (hub *Hub) Unsubscribe(listener chan Message) {

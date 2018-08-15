@@ -13,8 +13,8 @@ type MessageServer struct {
 	listeners *Hub
 }
 
-func NewMessageServer(journal chan Message) *MessageServer {
-	return &MessageServer{NewHub(journal)}
+func NewMessageServer(stamper func(Message) error) *MessageServer {
+	return &MessageServer{NewHub(stamper)}
 }
 
 func (server *MessageServer) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
@@ -92,9 +92,15 @@ func (server *MessageServer) ServeHTTP(writer http.ResponseWriter, request *http
 			return
 		}
 
-		server.listeners.Publish(channel, message)
+		err = server.listeners.Publish(channel, message)
+
+		if err != nil {
+			writer.WriteHeader(201)
+			fmt.Fprintln(writer, err.Error())
+			return
+		}
 
 		writer.WriteHeader(201)
-		fmt.Fprintf(writer, "Posted.\n")
+		fmt.Fprintln(writer, "Posted.")
 	}
 }
