@@ -21,11 +21,19 @@ func main() {
 
 	flag.Parse()
 
+	journal := make(chan Message)
+
+	go func() {
+		for message := range journal {
+			fmt.Println(message.Content)
+		}
+	}()
+
 	http.HandleFunc("/", func(writer http.ResponseWriter, request *http.Request) {
 		fmt.Fprintln(writer, "Hello, this is Tokyo C Server. It works!")
 	})
 
-	http.Handle("/messages/", NewMessageServer(nil))
+	http.Handle("/messages/", NewMessageServer(journal))
 
 	if file, err := os.OpenFile(pidfile, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0755); err == nil {
 		fmt.Fprintf(file, "%d\n", os.Getpid())
