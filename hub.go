@@ -44,13 +44,13 @@ func (hub *Hub) Publish(channel int, message Message) {
 	hub.mutex.RLock()
 	defer hub.mutex.RUnlock()
 
+	if hub.journal != nil {
+		hub.journal <- message
+	}
+
 	for listener, _channel := range hub.listeners {
 		if channel == _channel {
 			listener <- message
-		}
-
-		if hub.journal != nil {
-			hub.journal <- message
 		}
 	}
 }
