@@ -13,8 +13,8 @@ type MessageServer struct {
 	listeners *Hub
 }
 
-func NewMessageServer() *MessageServer {
-	return &MessageServer{NewHub()}
+func NewMessageServer(journal chan Message) *MessageServer {
+	return &MessageServer{NewHub(journal)}
 }
 
 func (server *MessageServer) ServeHTTP(writer http.ResponseWriter, request *http.Request) {

@@ -20,10 +20,15 @@ type Message struct {
 type Hub struct {
 	mutex     *sync.RWMutex
 	listeners map[chan Message]int
+	journal chan Message
 }
 
-func NewHub() *Hub {
-	return &Hub{new(sync.RWMutex), make(map[chan Message]int)}
+func NewHub(journal chan Message) *Hub {
+	return &Hub{
+		new(sync.RWMutex),
+		make(map[chan Message]int),
+		journal,
+	}
 }
 
 func (hub *Hub) Subscribe(channel int, listener chan Message) {
@@ -42,6 +47,10 @@ func (hub *Hub) Publish(channel int, message Message) {
 	for listener, _channel := range hub.listeners {
 		if channel == _channel {
 			listener <- message
+		}
+
+		if hub.journal != nil {
+			hub.journal <- message
 		}
 	}
 }

@@ -25,7 +25,7 @@ func main() {
 		fmt.Fprintln(writer, "Hello, this is Tokyo C Server. It works!")
 	})
 
-	http.Handle("/messages/", NewMessageServer())
+	http.Handle("/messages/", NewMessageServer(nil))
 
 	if file, err := os.OpenFile(pidfile, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0755); err == nil {
 		fmt.Fprintf(file, "%d\n", os.Getpid())
