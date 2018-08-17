@@ -20,7 +20,7 @@ var db *sql.DB
 func authenticate(request *http.Request) error {
 	var (
 		auth_type string
-		token string
+		token     string
 	)
 
 	fmt.Sscanf(request.Header.Get("Authorization"), "%s %s", &auth_type, &token)
@@ -47,7 +47,7 @@ func main() {
 
 	message_handler := NewMessageServer(handle_message)
 
-	db, err = sql.Open(os.Getenv("DATABASE_TYPE"), os.Getenv("DATABASE_URI") + "?parseTime=true")
+	db, err = sql.Open(os.Getenv("DATABASE_TYPE"), os.Getenv("DATABASE_URI")+"?parseTime=true")
 
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "failed to connect database; check environment variables DATABASE_TYPE and DATABASE_URI")
@@ -110,7 +110,7 @@ func main() {
 
 		if err != nil {
 			writer.WriteHeader(500)
-			fmt.Fprintln(writer, "internal server error: " + err.Error())
+			fmt.Fprintln(writer, "internal server error: "+err.Error())
 			return
 		}
 
@@ -126,7 +126,7 @@ func main() {
 				&message.IsEvent,
 				&message.PostedAt,
 				&message.Content)
-			
+
 			if err != nil {
 				break
 			}
@@ -149,7 +149,6 @@ func main() {
 		return
 	}
 
-
 	fmt.Fprintln(os.Stderr, "Start listening....")
 
 	if http.ListenAndServe(":"+strconv.Itoa(port), nil) != nil {
@@ -165,7 +164,7 @@ func handle_message(channel Channel, message Message) error {
 	result, err := db.Exec(
 		"INSERT INTO messages (channel, author, is_event, posted_at, content) VALUES (?, ?, ?, ?, ?)",
 		channel, 0, 0, message.PostedAt, message.Content)
-	
+
 	if err != nil {
 		return errors.New("failed to store message because... " + err.Error())
 	}
@@ -180,4 +179,3 @@ func handle_message(channel Channel, message Message) error {
 
 	return nil
 }
-

@@ -8,12 +8,12 @@ import (
 type Channel int64
 
 type Message struct {
-	Id int64
-	Channel Channel
-	Author int64
-	IsEvent int
+	Id       int64
+	Channel  Channel
+	Author   int64
+	IsEvent  int
 	PostedAt time.Time
-	Content string
+	Content  string
 }
 
 type Hub struct {
