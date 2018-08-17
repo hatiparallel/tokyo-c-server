@@ -29,4 +29,11 @@ Just execute
 ## Publish a Message
 
 JSON messages will be accepted:
-`curl -X POST -H'Content-Type: application/json' -d '{"content":"Hello, world!"}' http://localhost:9000/stream/12345`.
+`curl -X POST -H'Authorization: Bearer token' -H'Content-Type: application/json' -d '{"Content":"Hello, world!"}' http://localhost:9000/streams/12345`.
+
+## Endpoints
+
+* GET /streams/_channel_ gives a realtime stream of messages of _channel_.
+* POST /streams/_channel_ takes a message and broadcast it on _channel_
+   * Schema: {Id int64; Channel Channel; Author int64; IsEvent int; PostedAt time.Time; Content string}
+* GET /messages/_channel_?since_id=_id_ gives a pile of messages of _channel_ since _id_.
