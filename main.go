@@ -50,7 +50,7 @@ func main() {
 	db, err = sql.Open(os.Getenv("DATABASE_TYPE"), os.Getenv("DATABASE_URI")+"?parseTime=true")
 
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "failed to connect database; check environment variables DATABASE_TYPE and DATABASE_URI")
+		fmt.Fprintln(os.Stderr, "failed to connect database: " + err.Error())
 		return
 	}
 
