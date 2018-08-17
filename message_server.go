@@ -18,14 +18,9 @@ func NewMessageServer(stamper func(Channel, Message) error) *MessageServer {
 }
 
 func (server *MessageServer) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
-	channel_string := strings.TrimPrefix(request.URL.Path, "/stream/")
-
-	var (
-		channel int
-		err     error
-	)
-
-	if channel, err = strconv.Atoi(channel_string); err != nil {
+	channel, err := strconv.Atoi(strings.TrimPrefix(request.URL.Path, "/streams/"))
+	
+	if err != nil {
 		writer.WriteHeader(400)
 		fmt.Fprintln(writer, "invalid channel name")
 		return

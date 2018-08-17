@@ -2,10 +2,19 @@ package main
 
 import (
 	"sync"
+	"time"
 )
 
-type Channel int
-type Message map[string]interface{}
+type Channel int64
+
+type Message struct {
+	Id int64
+	Channel Channel
+	Author int64
+	IsEvent int
+	PostedAt time.Time
+	Content string
+}
 
 type Hub struct {
 	mutex     *sync.RWMutex
