@@ -4,27 +4,28 @@ import (
 	"sync"
 )
 
+type Channel int
 type Message map[string]interface{}
 
 type Hub struct {
 	mutex     *sync.RWMutex
-	listeners map[chan Message]int
-	stamper   func(Message) error
+	listeners map[chan Message]Channel
+	stamper   func(Channel, Message) error
 }
 
-func NewHub(stamper func(Message) error) *Hub {
+func NewHub(stamper func(Channel, Message) error) *Hub {
 	return &Hub{
 		new(sync.RWMutex),
-		make(map[chan Message]int),
+		make(map[chan Message]Channel),
 		stamper,
 	}
 }
 
-func (hub *Hub) Stamp(message Message) error {
-	return hub.stamper(message)
+func (hub *Hub) Stamp(channel Channel, message Message) error {
+	return hub.stamper(channel, message)
 }
 
-func (hub *Hub) Subscribe(channel int, listener chan Message) {
+func (hub *Hub) Subscribe(channel Channel, listener chan Message) {
 	hub.mutex.Lock()
 	defer hub.mutex.Unlock()
 
@@ -33,11 +34,11 @@ func (hub *Hub) Subscribe(channel int, listener chan Message) {
 	return
 }
 
-func (hub *Hub) Publish(channel int, message Message) (err error) {
+func (hub *Hub) Publish(channel Channel, message Message) (err error) {
 	hub.mutex.RLock()
 	defer hub.mutex.RUnlock()
 
-	err = hub.Stamp(message)
+	err = hub.Stamp(channel, message)
 
 	if err != nil {
 		return err

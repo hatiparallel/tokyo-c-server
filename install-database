@@ -2,19 +2,23 @@
 
 source .env
 
-database_name="tokyo-c_`date +%Y%m%d`"
+echo "Installing database ${TOKYO_C_DATABASE_NAME}...  "
 
-echo -n "Installing database ${database_name}...  "
+mysql --user="${TOKYO_C_DATABASE_USER}" --host="${TOKYO_C_DATABASE_HOST}" --password="${TOKYO_C_DATABASE_PASSWORD}" <<EOS
+CREATE DATABASE ${TOKYO_C_DATABASE_NAME};
+USE ${TOKYO_C_DATABASE_NAME};
 
-mysql -u "${TOKYO_C_DATABASE_USER}" -h "${TOKYO_C_DATABASE_HOST}" <<EOS
-CREATE DATABASE ${database_name};
-USE ${database_name};
+CREATE TABLE friendships (
+	person_0 INT,
+	person_1 INT,
+	UNIQUE(person_0, person_1)
+);
 
 CREATE TABLE messages (
         id INT PRIMARY KEY AUTO_INCREMENT,
         channel INT,
         author INT,
-        category INT,
+        is_event BOOLEAN,
         posted_at DATETIME,
         content VARCHAR(4096),
         INDEX(channel)
@@ -28,8 +32,7 @@ CREATE TABLE channels (
 CREATE TABLE participations (
         person INT,
         channel INT,
-        UNIQUE(person, channel),
-        INDEX(person, channel)
+        UNIQUE(person, channel)
 );
 
 CREATE TABLE people (
@@ -39,4 +42,4 @@ CREATE TABLE people (
 );
 EOS
 
-echo "complete"
+echo "Complete!"

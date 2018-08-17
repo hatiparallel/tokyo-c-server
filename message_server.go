@@ -13,20 +13,12 @@ type MessageServer struct {
 	listeners *Hub
 }
 
-func NewMessageServer(stamper func(Message) error) *MessageServer {
+func NewMessageServer(stamper func(Channel, Message) error) *MessageServer {
 	return &MessageServer{NewHub(stamper)}
 }
 
 func (server *MessageServer) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
-	last_slash_index := strings.LastIndex(request.URL.Path, "/")
-
-	if last_slash_index == -1 {
-		writer.WriteHeader(404)
-		fmt.Fprintln(writer, "not found")
-		return
-	}
-
-	channel_string := request.URL.Path[last_slash_index+1:]
+	channel_string := strings.TrimPrefix(request.URL.Path, "/stream/")
 
 	var (
 		channel int
@@ -34,7 +26,7 @@ func (server *MessageServer) ServeHTTP(writer http.ResponseWriter, request *http
 	)
 
 	if channel, err = strconv.Atoi(channel_string); err != nil {
-		writer.WriteHeader(401)
+		writer.WriteHeader(400)
 		fmt.Fprintln(writer, "invalid channel name")
 		return
 	}
@@ -54,7 +46,7 @@ func (server *MessageServer) ServeHTTP(writer http.ResponseWriter, request *http
 
 		listener := make(chan Message)
 
-		server.listeners.Subscribe(channel, listener)
+		server.listeners.Subscribe(Channel(channel), listener)
 
 		defer server.listeners.Unsubscribe(listener)
 
@@ -92,15 +84,15 @@ func (server *MessageServer) ServeHTTP(writer http.ResponseWriter, request *http
 			return
 		}
 
-		err = server.listeners.Publish(channel, message)
+		err = server.listeners.Publish(Channel(channel), message)
 
 		if err != nil {
-			writer.WriteHeader(201)
+			writer.WriteHeader(200)
 			fmt.Fprintln(writer, err.Error())
 			return
 		}
 
-		writer.WriteHeader(201)
+		writer.WriteHeader(200)
 		fmt.Fprintln(writer, "Posted.")
 	}
 }
