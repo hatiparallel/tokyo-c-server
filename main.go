@@ -214,18 +214,19 @@ func endpoint_channels(writer http.ResponseWriter, request *http.Request) *http_
 	if request.Method == "GET" && parameter == "" {
 		rows, err := db.Query("SELECT id, name FROM participations, channels WHERE person = ? AND channel = id", subject)
 
-		var channel struct {
-			Id   int64
-			Name string
-		}
+		var channel Channel
+
+		channels := make([]Channel, 0, 16)
 
 		for rows.Next() {
 			if err := rows.Scan(&channel.Id, &channel.Name); err != nil {
 				return &http_status{500, err.Error()}
 			}
+
+			channels = append(channels, channel)
 		}
 
-		buffer, err := json.Marshal(channel)
+		buffer, err := json.Marshal(channels)
 
 		if err != nil {
 			return &http_status{500, err.Error()}
@@ -247,18 +248,19 @@ func endpoint_channels(writer http.ResponseWriter, request *http.Request) *http_
 		result, err := tx.Exec("INSERT INTO channels (name) VALUES (?)", request.PostForm.Get("name"))
 
 		if err != nil {
+			tx.Rollback()
 			return &http_status{500, err.Error()}
 		}
 
 		channel_id, err := result.LastInsertId()
 
 		if err != nil {
+			tx.Rollback()
 			return &http_status{500, err.Error()}
 		}
 
-		_, err = tx.Exec("INSERT INTO participations (person, channel) VALUES (?, ?)", subject, channel_id)
-
-		if err != nil {
+		if _, err = tx.Exec("INSERT INTO participations (person, channel) VALUES (?, ?)", subject, channel_id); err != nil {
+			tx.Rollback()
 			return &http_status{500, err.Error()}
 		}
 
@@ -296,10 +298,6 @@ func endpoint_channels(writer http.ResponseWriter, request *http.Request) *http_
 		}
 
 		row := tx.QueryRow("SELECT COUNT(*) FROM participations WHERE channel = ?", channel_id)
-
-		if err != nil {
-			return &http_status{500, err.Error()}
-		}
 
 		var size int
 
