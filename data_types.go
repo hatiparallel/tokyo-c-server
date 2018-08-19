@@ -9,6 +9,11 @@ type Person struct {
 	Name string
 }
 
+type Channel struct {
+	Id   int64
+	Name string
+}
+
 type Message struct {
 	Id       int64
 	Channel  int64
