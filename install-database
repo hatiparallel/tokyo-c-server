@@ -1,5 +1,9 @@
 #!/bin/bash
 
+if [ -n "$1" ];
+	source "$1"
+fi
+
 echo "Installing database ${TOKYO_C_DATABASE_NAME}...  "
 
 mysql --user="${TOKYO_C_DATABASE_USER}" --host="${TOKYO_C_DATABASE_HOST}" --password="${TOKYO_C_DATABASE_PASSWORD}" <<EOS
