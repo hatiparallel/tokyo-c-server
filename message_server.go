@@ -13,17 +13,15 @@ type MessageServer struct {
 	listeners *Hub
 }
 
-func NewMessageServer(stamper func(Channel, Message) error) *MessageServer {
+func NewMessageServer(stamper func(int64, Message) error) *MessageServer {
 	return &MessageServer{NewHub(stamper)}
 }
 
-func (server *MessageServer) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
+func (server *MessageServer) handle_request(writer http.ResponseWriter, request *http.Request) *http_status {
 	channel, err := strconv.Atoi(strings.TrimPrefix(request.URL.Path, "/streams/"))
 
 	if err != nil {
-		writer.WriteHeader(400)
-		fmt.Fprintln(writer, "invalid channel name")
-		return
+		return &http_status{400, "invalid channel id"}
 	}
 
 	switch request.Method {
@@ -36,12 +34,12 @@ func (server *MessageServer) ServeHTTP(writer http.ResponseWriter, request *http
 		writer.Header().Set("Transfer-Encoding", "chunked")
 
 		if flusher, flushable = writer.(http.Flusher); !flushable {
-			return
+			return &http_status{400, "streaming cannot be established"}
 		}
 
 		listener := make(chan Message)
 
-		server.listeners.Subscribe(Channel(channel), listener)
+		server.listeners.Subscribe(int64(channel), listener)
 
 		defer server.listeners.Unsubscribe(listener)
 
@@ -54,9 +52,7 @@ func (server *MessageServer) ServeHTTP(writer http.ResponseWriter, request *http
 		}
 	case "POST":
 		if request.Header.Get("Content-Type") != "application/json" {
-			writer.WriteHeader(400)
-			fmt.Fprintln(writer, "bad content type")
-			return
+			return &http_status{415, "bad content type"}
 		}
 
 		var (
@@ -66,28 +62,24 @@ func (server *MessageServer) ServeHTTP(writer http.ResponseWriter, request *http
 		)
 
 		if buffer, err = ioutil.ReadAll(request.Body); err != nil {
-			writer.WriteHeader(400)
-			fmt.Fprintln(writer, "invalid content stream")
-			return
+			return &http_status{400, "invalid content stream"}
 		}
 
 		request.Body.Close()
 
 		if json.Unmarshal(buffer, &message) != nil {
-			writer.WriteHeader(400)
-			fmt.Fprintln(writer, "corrupt content format")
-			return
+			return &http_status{400, "corrupt content format"}
 		}
 
-		err = server.listeners.Publish(Channel(channel), message)
+		err = server.listeners.Publish(int64(channel), message)
 
 		if err != nil {
-			writer.WriteHeader(200)
-			fmt.Fprintln(writer, err.Error())
-			return
+			return &http_status{500, err.Error()}
 		}
 
 		writer.WriteHeader(200)
 		fmt.Fprintln(writer, "Posted.")
 	}
+
+	return nil
 }
