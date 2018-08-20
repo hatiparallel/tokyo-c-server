@@ -2,39 +2,27 @@ package main
 
 import (
 	"sync"
-	"time"
 )
-
-type Channel int64
-
-type Message struct {
-	Id       int64
-	Channel  Channel
-	Author   int64
-	IsEvent  int
-	PostedAt time.Time
-	Content  string
-}
 
 type Hub struct {
 	mutex     *sync.RWMutex
-	listeners map[chan Message]Channel
-	stamper   func(Channel, Message) error
+	listeners map[chan Message]int64
+	stamper   func(int64, Message) error
 }
 
-func NewHub(stamper func(Channel, Message) error) *Hub {
+func NewHub(stamper func(int64, Message) error) *Hub {
 	return &Hub{
 		new(sync.RWMutex),
-		make(map[chan Message]Channel),
+		make(map[chan Message]int64),
 		stamper,
 	}
 }
 
-func (hub *Hub) Stamp(channel Channel, message Message) error {
+func (hub *Hub) Stamp(channel int64, message Message) error {
 	return hub.stamper(channel, message)
 }
 
-func (hub *Hub) Subscribe(channel Channel, listener chan Message) {
+func (hub *Hub) Subscribe(channel int64, listener chan Message) {
 	hub.mutex.Lock()
 	defer hub.mutex.Unlock()
 
@@ -43,7 +31,7 @@ func (hub *Hub) Subscribe(channel Channel, listener chan Message) {
 	return
 }
 
-func (hub *Hub) Publish(channel Channel, message Message) (err error) {
+func (hub *Hub) Publish(channel int64, message Message) (err error) {
 	hub.mutex.RLock()
 	defer hub.mutex.RUnlock()
 
