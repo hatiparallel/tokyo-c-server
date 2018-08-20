@@ -33,7 +33,15 @@ JSON messages will be accepted:
 
 ## Endpoints
 
-* GET /streams/_channel_ gives a realtime stream of messages of _channel_.
-* POST /streams/_channel_ takes a message and broadcast it on _channel_
-   * Schema: {Id int64; Channel Channel; Author int64; IsEvent int; PostedAt time.Time; Content string}
-* GET /messages/_channel_?since_id=_id_ gives a pile of messages of _channel_ since _id_.
+* **GET** /streams/_channel_ gives a realtime stream of messages of _channel_.
+* **POST** /streams/_channel_ takes a message and broadcast it on _channel_
+   * Payload (application/json): {Id int64; Channel Channel; Author int64; IsEvent int; PostedAt time.Time; Content string}
+* **GET** /messages/_channel_?since_id=_id_ gives a pile of messages of _channel_ since _id_.
+* **GET** /friendships/ gives a friend list of the current user.
+* **PUT** /friendships/_person_ makes a friendship from the current user to _person_.
+* **DELETE** /friendships/_person_ dissolves a friendship from the current user to _person_.
+* **GET** /channels/ gives a channel list the current user is participating in.
+* **POST** /channels/ makes a new channel with the only participant being the current user.
+   * Payload (application/x-www-form-urlencoded): {name string}
+* **POST** /channels/_channel_ makes the current user participate in _channel_.
+* **DELETE** /channels/_channel_ makes the current user withdraw from _channel_. (the channel will perish if the current user is the last participant).

@@ -1,6 +1,8 @@
 #!/bin/bash
 
-source .env
+if [ -n "$1" ];
+	source "$1"
+fi
 
 echo "Installing database ${TOKYO_C_DATABASE_NAME}...  "
 
