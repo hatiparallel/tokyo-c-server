@@ -24,7 +24,7 @@ Execute `DATABASE_TYPE=mysql DATABASE_URI="root:PASSWORD@tcp(127.0.0.1)/tokyoC_D
 
 ## Make a Listen
 Just execute
-`curl http://localhost:9000/stream/12345`.
+`curl http://localhost:9000/streams/12345`.
 
 ## Publish a Message
 
