@@ -35,7 +35,7 @@ JSON messages will be accepted:
 
 * **GET** /streams/_channel_ gives a realtime stream of messages of _channel_.
 * **POST** /streams/_channel_ takes a message and broadcast it on _channel_
-   * Payload (application/json): {Id int64; Channel Channel; Author int64; IsEvent int; PostedAt time.Time; Content string}
+   * Payload (application/json): {IsEvent int; Content string}
 * **GET** /messages/_channel_?since_id=_id_ gives a pile of messages of _channel_ since _id_.
 * **GET** /friendships/ gives a friend list of the current user.
 * **PUT** /friendships/_person_ makes a friendship from the current user to _person_.
