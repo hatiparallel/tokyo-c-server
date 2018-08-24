@@ -16,7 +16,7 @@ TOKYO_C_DATABASE_PASSWORD="PASSWORD"
 TOKYO_C_DATABASE_NAME="tokyoC_DB"
 ```
 
-and execute `./install-database`.
+and execute `./install-database .env`.
 
 ## Establish a Server
 
