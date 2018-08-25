@@ -117,7 +117,7 @@ func main() {
 	}
 }
 
-func stamp_message(channel_id int64, message Message) error {
+func stamp_message(channel_id int64, message *Message) error {
 	message.Channel = channel_id
 	message.PostedAt = time.Now()
 

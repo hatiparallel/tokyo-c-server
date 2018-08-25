@@ -13,7 +13,7 @@ type MessageServer struct {
 	listeners *Hub
 }
 
-func NewMessageServer(stamper func(int64, Message) error) *MessageServer {
+func NewMessageServer(stamper func(int64, *Message) error) *MessageServer {
 	return &MessageServer{NewHub(stamper)}
 }
 
@@ -71,7 +71,7 @@ func (server *MessageServer) handle_request(writer http.ResponseWriter, request 
 			return &http_status{400, "corrupt content format"}
 		}
 
-		err = server.listeners.Publish(int64(channel), message)
+		err = server.listeners.Publish(int64(channel), &message)
 
 		if err != nil {
 			return &http_status{500, err.Error()}

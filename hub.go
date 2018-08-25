@@ -7,10 +7,10 @@ import (
 type Hub struct {
 	mutex     *sync.RWMutex
 	listeners map[chan Message]int64
-	stamper   func(int64, Message) error
+	stamper   func(int64, *Message) error
 }
 
-func NewHub(stamper func(int64, Message) error) *Hub {
+func NewHub(stamper func(int64, *Message) error) *Hub {
 	return &Hub{
 		new(sync.RWMutex),
 		make(map[chan Message]int64),
@@ -18,7 +18,7 @@ func NewHub(stamper func(int64, Message) error) *Hub {
 	}
 }
 
-func (hub *Hub) Stamp(channel int64, message Message) error {
+func (hub *Hub) Stamp(channel int64, message *Message) error {
 	return hub.stamper(channel, message)
 }
 
@@ -31,7 +31,7 @@ func (hub *Hub) Subscribe(channel int64, listener chan Message) {
 	return
 }
 
-func (hub *Hub) Publish(channel int64, message Message) (err error) {
+func (hub *Hub) Publish(channel int64, message *Message) (err error) {
 	hub.mutex.RLock()
 	defer hub.mutex.RUnlock()
 
@@ -43,7 +43,7 @@ func (hub *Hub) Publish(channel int64, message Message) (err error) {
 
 	for listener, _channel := range hub.listeners {
 		if channel == _channel {
-			listener <- message
+			listener <- *message
 		}
 	}
 
