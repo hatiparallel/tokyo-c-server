@@ -4,11 +4,6 @@ import (
 	"time"
 )
 
-type Person struct {
-	Id   int64
-	Name string
-}
-
 type Channel struct {
 	Id   int64
 	Name string
