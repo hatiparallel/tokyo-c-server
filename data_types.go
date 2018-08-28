@@ -17,7 +17,7 @@ type Channel struct {
 type Message struct {
 	Id       int64
 	Channel  int64
-	Author   int64
+	Author   string
 	IsEvent  int
 	PostedAt time.Time
 	Content  string
