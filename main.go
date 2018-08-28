@@ -200,18 +200,18 @@ func endpoint_friendships(writer http.ResponseWriter, request *http.Request) *ht
 		return &http_status{405, "method not allowed"}
 	}
 
-	rows, err := db.Query("SELECT id, name FROM friendships, people WHERE person_0 = ? AND person_1 = id", subject)
+	rows, err := db.Query("SELECT person_1 FROM friendships WHERE person_0 = ? AND person_1 = id", subject)
 
 	if err != nil {
 		return &http_status{500, err.Error()}
 	}
 
-	var person Person
+	friends := make([]string, 0, 16)
 
-	friends := make([]Person, 0, 16)
+	var person string
 
 	for rows.Next() {
-		if err := rows.Scan(&person.Id, &person.Name); err != nil {
+		if err := rows.Scan(&person); err != nil {
 			return &http_status{500, err.Error()}
 		}
 
@@ -358,24 +358,24 @@ func endpoint_channels(writer http.ResponseWriter, request *http.Request) *http_
 
 	var channel struct {
 		Name         string
-		Participants []Person
+		Participants []string
 	}
 
 	if err := row.Scan(&channel.Name); err != nil {
 		return &http_status{410, err.Error()}
 	}
 
-	rows, err := db.Query("SELECT id, name FROM participations, people WHERE channel = ? AND person = id", channel_id)
-	channel.Participants = make([]Person, 0, 16)
+	rows, err := db.Query("SELECT person FROM participations WHERE channel = ?", channel_id)
+	channel.Participants = make([]string, 0, 16)
 
 	if err != nil {
 		return &http_status{500, err.Error()}
 	}
 
-	var person Person
+	var person string
 
 	for rows.Next() {
-		if err := rows.Scan(&person.Id, &person.Name); err != nil {
+		if err := rows.Scan(&person); err != nil {
 			return &http_status{500, err.Error()}
 		}
 
