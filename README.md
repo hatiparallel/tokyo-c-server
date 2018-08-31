@@ -18,6 +18,10 @@ TOKYO_C_DATABASE_NAME="tokyoC_DB"
 
 and execute `./install-database .env`.
 
+## Place a Firebase Credentials
+
+`cat > firebase-credentials.json`
+
 ## Establish a Server
 
 Execute `DATABASE_TYPE=mysql DATABASE_URI="root:PASSWORD@tcp(127.0.0.1)/tokyoC_DB" ~/bin/tokyo-c-server -port 9000` and you have an endpoint at `http://localhost:9000/`.

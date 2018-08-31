@@ -12,7 +12,12 @@ import (
 	"strings"
 	"time"
 
+	"golang.org/x/net/context"
+	"firebase.google.com/go"
+	firebase_auth "firebase.google.com/go/auth"
 	_ "github.com/go-sql-driver/mysql"
+
+	"google.golang.org/api/option"
 )
 
 type http_status struct {
@@ -21,8 +26,9 @@ type http_status struct {
 }
 
 var db *sql.DB
+var idp *firebase_auth.Client
 
-func authenticate(request *http.Request, subject *int) error {
+func authenticate(request *http.Request, subject *string) error {
 	var (
 		auth_type string
 		token     string
@@ -34,7 +40,13 @@ func authenticate(request *http.Request, subject *int) error {
 		return errors.New("auth type must be Bearer")
 	}
 
-	*subject = 1
+	verified, err := idp.VerifyIDToken(context.Background(), token)
+
+	if err != nil {
+		return errors.New("invalid token: "+err.Error())
+	}
+
+	*subject = verified.UID
 
 	return nil
 }
@@ -45,10 +57,12 @@ func main() {
 
 		port    int
 		pidfile string
+		firebase_credentials string
 	)
 
 	flag.IntVar(&port, "port", 80, "specifies port number to be binded")
 	flag.StringVar(&pidfile, "pidfile", "/tmp/tokyo-c.pid", "specifies path to pidfile")
+	flag.StringVar(&firebase_credentials, "firebase", "firebase-credentials.json", "specifies path to firebase credentials")
 
 	flag.Parse()
 
@@ -56,6 +70,20 @@ func main() {
 
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "failed to connect database: "+err.Error())
+		return
+	}
+
+	firebase_app, err := firebase.NewApp(context.Background(), nil, option.WithCredentialsFile(firebase_credentials))
+
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "firebase initialization failed: "+err.Error())
+		return
+	}
+
+	idp, err = firebase_app.Auth(context.Background())
+
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "firebase authentication failed: "+err.Error())
 		return
 	}
 
@@ -80,11 +108,13 @@ func main() {
 	message_handler := NewMessageServer(stamp_message)
 
 	http.HandleFunc("/streams/", func(writer http.ResponseWriter, request *http.Request) {
-		var subject int
+		var subject string
 
-		if authenticate(request, &subject) != nil {
+		err := authenticate(request, &subject)
+		
+		if err != nil {
 			writer.WriteHeader(401)
-			fmt.Fprintln(writer, "auth failed")
+			fmt.Fprintln(writer, err.Error())
 			return
 		}
 
@@ -141,10 +171,12 @@ func stamp_message(channel_id int64, message *Message) error {
 }
 
 func endpoint_friendships(writer http.ResponseWriter, request *http.Request) *http_status {
-	var subject int
+	var subject string
 
-	if authenticate(request, &subject) != nil {
-		return &http_status{401, "auth failed"}
+	err := authenticate(request, &subject)
+	
+	if err!= nil {
+		return &http_status{401, err.Error()}
 	}
 
 	person_id, err := strconv.Atoi(strings.TrimPrefix(request.URL.Path, "/friendships/"))
@@ -168,18 +200,18 @@ func endpoint_friendships(writer http.ResponseWriter, request *http.Request) *ht
 		return &http_status{405, "method not allowed"}
 	}
 
-	rows, err := db.Query("SELECT id, name FROM friendships, people WHERE person_0 = ? AND person_1 = id", subject)
+	rows, err := db.Query("SELECT person_1 FROM friendships WHERE person_0 = ? AND person_1 = id", subject)
 
 	if err != nil {
 		return &http_status{500, err.Error()}
 	}
 
-	var person Person
+	friends := make([]string, 0, 16)
 
-	friends := make([]Person, 0, 16)
+	var person string
 
 	for rows.Next() {
-		if err := rows.Scan(&person.Id, &person.Name); err != nil {
+		if err := rows.Scan(&person); err != nil {
 			return &http_status{500, err.Error()}
 		}
 
@@ -199,10 +231,12 @@ func endpoint_friendships(writer http.ResponseWriter, request *http.Request) *ht
 }
 
 func endpoint_channels(writer http.ResponseWriter, request *http.Request) *http_status {
-	var subject int
+	var subject string
 
-	if authenticate(request, &subject) != nil {
-		return &http_status{401, "auth failed"}
+	err := authenticate(request, &subject)
+	
+	if err != nil {
+		return &http_status{401, err.Error()}
 	}
 
 	if err := request.ParseForm(); err != nil {
@@ -324,24 +358,24 @@ func endpoint_channels(writer http.ResponseWriter, request *http.Request) *http_
 
 	var channel struct {
 		Name         string
-		Participants []Person
+		Participants []string
 	}
 
 	if err := row.Scan(&channel.Name); err != nil {
 		return &http_status{410, err.Error()}
 	}
 
-	rows, err := db.Query("SELECT id, name FROM participations, people WHERE channel = ? AND person = id", channel_id)
-	channel.Participants = make([]Person, 0, 16)
+	rows, err := db.Query("SELECT person FROM participations WHERE channel = ?", channel_id)
+	channel.Participants = make([]string, 0, 16)
 
 	if err != nil {
 		return &http_status{500, err.Error()}
 	}
 
-	var person Person
+	var person string
 
 	for rows.Next() {
-		if err := rows.Scan(&person.Id, &person.Name); err != nil {
+		if err := rows.Scan(&person); err != nil {
 			return &http_status{500, err.Error()}
 		}
 
@@ -361,10 +395,12 @@ func endpoint_channels(writer http.ResponseWriter, request *http.Request) *http_
 }
 
 func endpoint_messages(writer http.ResponseWriter, request *http.Request) *http_status {
-	var subject int
+	var subject string
 
-	if authenticate(request, &subject) != nil {
-		return &http_status{401, "auth failed"}
+	err := authenticate(request, &subject)
+	
+	if err != nil {
+		return &http_status{401, err.Error()}
 	}
 
 	if request.Method != "GET" {

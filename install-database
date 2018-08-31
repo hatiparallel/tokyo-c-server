@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -e
+
 if [ -n "$1" ]; then
 	source "$1"
 fi
@@ -11,15 +13,15 @@ CREATE DATABASE ${TOKYO_C_DATABASE_NAME};
 USE ${TOKYO_C_DATABASE_NAME};
 
 CREATE TABLE friendships (
-	person_0 INT,
-	person_1 INT,
+	person_0 VARCHAR(256),
+	person_1 VARCHAR(256),
 	UNIQUE(person_0, person_1)
 );
 
 CREATE TABLE messages (
         id INT PRIMARY KEY AUTO_INCREMENT,
         channel INT,
-        author INT,
+        author VARCHAR(256),
         is_event BOOLEAN,
         posted_at DATETIME,
         content VARCHAR(4096),
@@ -32,15 +34,9 @@ CREATE TABLE channels (
 );
 
 CREATE TABLE participations (
-        person INT,
+        person VARCHAR(256),
         channel INT,
         UNIQUE(person, channel)
-);
-
-CREATE TABLE people (
-        id INT PRIMARY KEY AUTO_INCREMENT,
-        name VARCHAR(128),
-        token VARCHAR(1024)
 );
 EOS
 

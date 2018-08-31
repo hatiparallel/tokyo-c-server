@@ -26,6 +26,10 @@
 
 
 [[constraint]]
+  name = "firebase.google.com/go"
+  version = "3.3.0"
+
+[[constraint]]
   name = "github.com/go-sql-driver/mysql"
   version = "1.4.0"
 
