@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"strconv"
 	"strings"
 	"net/http"
 )
@@ -16,7 +15,7 @@ func endpoint_friendships(writer http.ResponseWriter, request *http.Request) *ht
 		return &http_status{401, err.Error()}
 	}
 
-	person_id, err := strconv.Atoi(strings.TrimPrefix(request.URL.Path, "/friendships/"))
+	person_id := strings.TrimPrefix(request.URL.Path, "/friendships/")
 
 	if request.Method != "GET" && err != nil {
 		return &http_status{400, "failed to parse person id"}
