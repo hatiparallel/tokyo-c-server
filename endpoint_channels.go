@@ -93,7 +93,7 @@ func endpoint_channels(writer http.ResponseWriter, request *http.Request) *http_
 
 	var channel struct {
 		Name         string
-		Participants []string
+		Members []string
 	}
 
 	if err := row.Scan(&channel.Name); err != nil {
@@ -101,7 +101,7 @@ func endpoint_channels(writer http.ResponseWriter, request *http.Request) *http_
 	}
 
 	rows, err := db.Query("SELECT person FROM memberships WHERE channel = ?", channel_id)
-	channel.Participants = make([]string, 0, 16)
+	channel.Members = make([]string, 0, 16)
 
 	if err != nil {
 		return &http_status{500, err.Error()}
@@ -114,7 +114,7 @@ func endpoint_channels(writer http.ResponseWriter, request *http.Request) *http_
 			return &http_status{500, err.Error()}
 		}
 
-		channel.Participants = append(channel.Participants, person)
+		channel.Members = append(channel.Members, person)
 	}
 
 	buffer, err := json.Marshal(channel)
