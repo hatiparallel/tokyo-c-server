@@ -26,42 +26,38 @@ func (server *MessageServer) handle_request(writer http.ResponseWriter, request 
 
 	switch request.Method {
 	case "GET":
-		var (
-			flushable bool
-			flusher   http.Flusher
-		)
-
 		writer.Header().Set("Transfer-Encoding", "chunked")
 
-		if flusher, flushable = writer.(http.Flusher); !flushable {
+		flusher, flushable := writer.(http.Flusher)
+		
+		if !flushable {
 			return &http_status{400, "streaming cannot be established"}
 		}
 
 		listener := make(chan Message)
+		encoder := json.NewEncoder(writer)
 
 		server.listeners.Subscribe(int64(channel), listener)
 
 		defer server.listeners.Unsubscribe(listener)
 
 		for {
-			if payload, err := json.Marshal(<-listener); err == nil {
-				fmt.Fprintf(writer, "%s\n", payload)
+			if encoder.Encode(<-listener) != nil {
+				break
 			}
 
 			flusher.Flush()
 		}
 	case "POST":
+		var message Message
+
 		if request.Header.Get("Content-Type") != "application/json" {
 			return &http_status{415, "bad content type"}
 		}
 
-		var (
-			err     error
-			buffer  []byte
-			message Message
-		)
-
-		if buffer, err = ioutil.ReadAll(request.Body); err != nil {
+		buffer, err := ioutil.ReadAll(request.Body)
+		
+		if err != nil {
 			return &http_status{400, "invalid content stream"}
 		}
 
