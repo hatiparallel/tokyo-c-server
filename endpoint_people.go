@@ -17,10 +17,6 @@ func endpoint_people(writer http.ResponseWriter, request *http.Request) *http_st
 		return &http_status{401, err.Error()}
 	}
 
-	if err := request.ParseForm(); err != nil {
-		return &http_status{401, "auth failed"}
-	}
-
 	parameter := strings.TrimPrefix(request.URL.Path, "/people/")
 
 	record, err := idp.GetUser(context.Background(), parameter)
