@@ -33,7 +33,7 @@ CREATE TABLE channels (
         name VARCHAR(256)
 );
 
-CREATE TABLE participations (
+CREATE TABLE memberships (
         person VARCHAR(256),
         channel INT,
         UNIQUE(person, channel)

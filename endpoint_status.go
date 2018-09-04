@@ -15,7 +15,7 @@ func endpoint_status(writer http.ResponseWriter, request *http.Request) *http_st
 		return &http_status{401, err.Error()}
 	}
 
-	rows, err := db.Query("SELECT participations.channel, MAX(id) FROM participations, messages WHERE person = ? AND participations.channel = messages.channel GROUP BY participations.channel", subject)
+	rows, err := db.Query("SELECT memberships.channel, MAX(id) FROM memberships, messages WHERE person = ? AND memberships.channel = messages.channel GROUP BY memberships.channel", subject)
 
 	if err != nil {
 		return &http_status{500, err.Error()}
