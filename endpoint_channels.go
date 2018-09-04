@@ -55,10 +55,14 @@ func endpoint_channels(writer http.ResponseWriter, request *http.Request) *http_
 		if _, err := db.Exec("INSERT INTO participations (channel, person) VALUES (?, ?)", channel_id, person_id); err != nil {
 			return &http_status{500, err.Error()}
 		}
+
+		message_server.listeners.Publish(int64(channel_id), &Message{IsEvent: 1, Content: "join"})
 	case "DELETE":
 		if _, err := db.Exec("DELETE FROM participations WHERE channel = ? AND person = ?", channel_id, person_id); err != nil {
 			return &http_status{500, err.Error()}
 		}
+
+		message_server.listeners.Publish(int64(channel_id), &Message{IsEvent: 1, Content: "leave"})
 
 		tx, err := db.Begin()
 
@@ -203,6 +207,8 @@ func endpoint_channels_without_parameter(subject string, writer http.ResponseWri
 		if err := tx.Commit(); err != nil {
 			return &http_status{500, err.Error()}
 		}
+
+		message_server.listeners.Publish(int64(channel_id), &Message{IsEvent: 1, Content: "join"})
 
 		fmt.Fprintf(writer, "%d", channel_id)
 
