@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 	"net/http"
+	"io/ioutil"
 )
 
 func endpoint_channels(writer http.ResponseWriter, request *http.Request) *http_status {
@@ -57,7 +58,25 @@ func endpoint_channels(writer http.ResponseWriter, request *http.Request) *http_
 			return &http_status{500, err.Error()}
 		}
 
-		result, err := tx.Exec("INSERT INTO channels (name) VALUES (?)", request.PostForm.Get("name"))
+		var channel_info struct {Name string; Members []string}
+
+		if request.Header.Get("Content-Type") != "application/json" {
+			return &http_status{415, "bad content type"}
+		}
+
+		buffer, err := ioutil.ReadAll(request.Body)
+		
+		if err != nil {
+			return &http_status{400, "invalid content stream"}
+		}
+
+		request.Body.Close()
+
+		if json.Unmarshal(buffer, &channel_info) != nil {
+			return &http_status{400, "corrupt content format"}
+		}
+
+		result, err := tx.Exec("INSERT INTO channels (name) VALUES (?)", channel_info.Name)
 
 		if err != nil {
 			tx.Rollback()
@@ -71,9 +90,13 @@ func endpoint_channels(writer http.ResponseWriter, request *http.Request) *http_
 			return &http_status{500, err.Error()}
 		}
 
-		if _, err = tx.Exec("INSERT INTO participations (person, channel) VALUES (?, ?)", subject, channel_id); err != nil {
-			tx.Rollback()
-			return &http_status{500, err.Error()}
+		channel_info.Members = append(channel_info.Members, subject)
+
+		for _, person_id := range channel_info.Members {
+			if _, err = tx.Exec("INSERT INTO participations (person, channel) VALUES (?, ?)", person_id, channel_id); err != nil {
+				tx.Rollback()
+				return &http_status{500, err.Error()}
+			}
 		}
 
 		if err := tx.Commit(); err != nil {
@@ -85,21 +108,35 @@ func endpoint_channels(writer http.ResponseWriter, request *http.Request) *http_
 		return nil
 	}
 
-	channel_id, err := strconv.Atoi(parameter)
+	parameter_splited := strings.SplitN(parameter, "/", 2)
+
+	if len(parameter_splited) < 2 {
+		parameter_splited = append(parameter_splited, "")
+	}
+
+	channel_id, err := strconv.Atoi(parameter_splited[0])
 
 	if err != nil {
 		return &http_status{400, "failed to parse channel id"}
 	}
 
+	person_id := parameter_splited[1]
+
+	if db.QueryRow("SELECT person FROM participations WHERE person = ?", subject).Scan(&subject) != nil {
+		return &http_status{403, "not a member"}
+	}
+
 	switch request.Method {
 	case "GET":
-
-	case "POST":
-		if _, err := db.Exec("INSERT INTO participations (channel, person) VALUES (?, ?)", channel_id, subject); err != nil {
+		if person_id != "" {
+			return &http_status{400, "person parameter cannot be specified"}
+		}
+	case "PUT":
+		if _, err := db.Exec("INSERT INTO participations (channel, person) VALUES (?, ?)", channel_id, person_id); err != nil {
 			return &http_status{500, err.Error()}
 		}
 	case "DELETE":
-		if _, err := db.Exec("DELETE FROM participations WHERE channel = ? AND person = ?", channel_id, subject); err != nil {
+		if _, err := db.Exec("DELETE FROM participations WHERE channel = ? AND person = ?", channel_id, person_id); err != nil {
 			return &http_status{500, err.Error()}
 		}
 
@@ -129,10 +166,6 @@ func endpoint_channels(writer http.ResponseWriter, request *http.Request) *http_
 	}
 
 	row := db.QueryRow("SELECT name FROM channels WHERE id = ?", channel_id)
-
-	if err != nil {
-		return &http_status{500, err.Error()}
-	}
 
 	var channel struct {
 		Name         string
