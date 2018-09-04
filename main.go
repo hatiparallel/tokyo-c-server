@@ -9,6 +9,7 @@ import (
 	"os"
 	"strconv"
 	"time"
+	"sync"
 
 	"golang.org/x/net/context"
 	"firebase.google.com/go"
@@ -25,6 +26,16 @@ type http_status struct {
 
 var db *sql.DB
 var idp *firebase_auth.Client
+var pin_table struct {
+	store map[int]struct {
+		owner string
+		pendings map[string]bool
+		channel chan string
+		mutex *sync.Mutex
+	}
+	inverse map[string]int
+	mutex *sync.Mutex
+}
 
 func authenticate(request *http.Request, subject *string) error {
 	var (
@@ -57,7 +68,6 @@ func authenticate(request *http.Request, subject *string) error {
 func main() {
 	var (
 		err error
-
 		port    int
 		pidfile string
 		firebase_credentials string
@@ -68,6 +78,8 @@ func main() {
 	flag.StringVar(&firebase_credentials, "firebase", "firebase-credentials.json", "specifies path to firebase credentials")
 
 	flag.Parse()
+
+	pin_table.mutex = new(sync.Mutex)
 
 	db, err = sql.Open(os.Getenv("DATABASE_TYPE"), os.Getenv("DATABASE_URI")+"?parseTime=true")
 
@@ -136,6 +148,13 @@ func main() {
 
 	http.HandleFunc("/people/", func(writer http.ResponseWriter, request *http.Request) {
 		if status := endpoint_people(writer, request); status != nil {
+			writer.WriteHeader(status.code)
+			fmt.Fprintln(writer, status.message)
+		}
+	})
+
+	http.HandleFunc("/pin", func(writer http.ResponseWriter, request *http.Request) {
+		if status := endpoint_pin(writer, request); status != nil {
 			writer.WriteHeader(status.code)
 			fmt.Fprintln(writer, status.message)
 		}
