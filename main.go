@@ -27,16 +27,10 @@ type http_status struct {
 var db *sql.DB
 var idp *firebase_auth.Client
 var pin_table struct {
-	store map[int]struct {
-		owner string
-		pendings map[string]bool
-		channel chan string
-		mutex *sync.Mutex
-	}
-	inverse map[string]int
+	by_pin map[int]*pin_ticket
+	by_owner map[string]*pin_ticket
 	mutex *sync.Mutex
 }
-
 
 func main() {
 	var (
@@ -52,6 +46,8 @@ func main() {
 
 	flag.Parse()
 
+	pin_table.by_pin = make(map[int]*pin_ticket)
+	pin_table.by_owner = make(map[string]*pin_ticket)
 	pin_table.mutex = new(sync.Mutex)
 
 	db, err = sql.Open(os.Getenv("DATABASE_TYPE"), os.Getenv("DATABASE_URI")+"?parseTime=true")

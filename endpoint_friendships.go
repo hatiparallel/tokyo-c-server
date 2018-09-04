@@ -26,10 +26,16 @@ func endpoint_friendships(writer http.ResponseWriter, request *http.Request) *ht
 	switch request.Method {
 	case "PUT":
 		pin_table.mutex.Lock()
-		ticket := pin_table.store[pin_table.inverse[subject]]
+		defer pin_table.mutex.Unlock()
+
+		ticket, exists := pin_table.by_owner[subject]
+
+		if !exists {
+			return &http_status{400, "your PIN not issued"}
+		}
+
 		ticket.mutex.Lock()
 		defer ticket.mutex.Unlock()
-		pin_table.mutex.Unlock()
 
 		if _, exists := ticket.pendings[person_id]; !exists {
 			return &http_status{403, "unable to approve unsent request"}
@@ -41,7 +47,7 @@ func endpoint_friendships(writer http.ResponseWriter, request *http.Request) *ht
 			return &http_status{500, err.Error()}
 		}
 	case "DELETE":
-		if _, err := db.Exec("DELETE FROM friendships WHERE (person_0 = $1 AND person_1 = $2) OR (person_0 = $2 AND person_1 = $1)", subject, person_id); err != nil {
+		if _, err := db.Exec("DELETE FROM friendships WHERE (person_0 = ? AND person_1 = ?) OR (person_0 = ? AND person_1 = ?)", subject, person_id, person_id, subject); err != nil {
 			return &http_status{500, err.Error()}
 		}
 	default:
@@ -75,15 +81,16 @@ func endpoint_friendships_without_person_id(subject string, writer http.Response
 		}
 
 		pin_table.mutex.Lock()
+		defer pin_table.mutex.Unlock()
 
-		ticket, pin_exists := pin_table.store[pin]
-		ticket.mutex.Lock()
-		defer ticket.mutex.Unlock()
-		pin_table.mutex.Unlock()
+		ticket, pin_exists := pin_table.by_pin[pin]
 
 		if !pin_exists {
 			return &http_status{400, "nonexistent PIN"}
 		}
+
+		ticket.mutex.Lock()
+		defer ticket.mutex.Unlock()
 
 		if subject == ticket.owner {
 			return &http_status{400, "oneself cannot be his friend"}
@@ -103,7 +110,7 @@ func endpoint_friendships_without_person_id(subject string, writer http.Response
 }
 
 func write_friendships(subject string, writer http.ResponseWriter) *http_status {
-	rows, err := db.Query("SELECT person_0, person_1 FROM friendships WHERE person_0 = $1 OR person_1 = $1", subject)
+	rows, err := db.Query("SELECT person_0, person_1 FROM friendships WHERE person_0 = ? OR person_1 = ?", subject, subject)
 
 	if err != nil {
 		return &http_status{500, err.Error()}
