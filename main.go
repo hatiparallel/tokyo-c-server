@@ -141,6 +141,13 @@ func main() {
 		}
 	})
 
+	http.HandleFunc("/status", func(writer http.ResponseWriter, request *http.Request) {
+		if status := endpoint_status(writer, request); status != nil {
+			writer.WriteHeader(status.code)
+			fmt.Fprintln(writer, status.message)
+		}
+	})
+
 	if file, err := os.OpenFile(pidfile, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0755); err == nil {
 		fmt.Fprintf(file, "%d\n", os.Getpid())
 		file.Close()
