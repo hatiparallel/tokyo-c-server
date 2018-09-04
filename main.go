@@ -24,13 +24,14 @@ type http_status struct {
 	message string
 }
 
-var db *sql.DB
-var idp *firebase_auth.Client
+var message_server *MessageServer
 var pin_table struct {
 	by_pin map[int]*pin_ticket
 	by_owner map[string]*pin_ticket
 	mutex *sync.Mutex
 }
+var db *sql.DB
+var idp *firebase_auth.Client
 
 func main() {
 	var (
@@ -49,6 +50,8 @@ func main() {
 	pin_table.by_pin = make(map[int]*pin_ticket)
 	pin_table.by_owner = make(map[string]*pin_ticket)
 	pin_table.mutex = new(sync.Mutex)
+
+	message_server = NewMessageServer(stamp_message)
 
 	db, err = sql.Open(os.Getenv("DATABASE_TYPE"), os.Getenv("DATABASE_URI")+"?parseTime=true")
 
@@ -89,8 +92,6 @@ func main() {
 		}
 	})
 
-	message_handler := NewMessageServer(stamp_message)
-
 	http.HandleFunc("/streams/", func(writer http.ResponseWriter, request *http.Request) {
 		var subject string
 
@@ -102,7 +103,7 @@ func main() {
 			return
 		}
 
-		if status := message_handler.handle_request(writer, request); status != nil {
+		if status := message_server.handle_request(writer, request); status != nil {
 			writer.WriteHeader(status.code)
 			fmt.Fprintln(writer, status.message)
 		}
