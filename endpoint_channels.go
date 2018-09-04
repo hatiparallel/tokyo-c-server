@@ -24,88 +24,8 @@ func endpoint_channels(writer http.ResponseWriter, request *http.Request) *http_
 
 	parameter := strings.TrimPrefix(request.URL.Path, "/channels/")
 
-	if request.Method == "GET" && parameter == "" {
-		rows, err := db.Query("SELECT id, name FROM participations, channels WHERE person = ? AND channel = id", subject)
-
-		var channel Channel
-
-		channels := make([]Channel, 0, 16)
-
-		for rows.Next() {
-			if err := rows.Scan(&channel.Id, &channel.Name); err != nil {
-				return &http_status{500, err.Error()}
-			}
-
-			channels = append(channels, channel)
-		}
-
-		buffer, err := json.Marshal(channels)
-
-		if err != nil {
-			return &http_status{500, err.Error()}
-		}
-
-		writer.Header().Set("Content-Type", "application/json")
-		writer.Write(buffer)
-
-		return nil
-	}
-
-	if request.Method == "POST" && parameter == "" {
-		tx, err := db.Begin()
-
-		if err != nil {
-			return &http_status{500, err.Error()}
-		}
-
-		var channel_info struct {Name string; Members []string}
-
-		if request.Header.Get("Content-Type") != "application/json" {
-			return &http_status{415, "bad content type"}
-		}
-
-		buffer, err := ioutil.ReadAll(request.Body)
-		
-		if err != nil {
-			return &http_status{400, "invalid content stream"}
-		}
-
-		request.Body.Close()
-
-		if json.Unmarshal(buffer, &channel_info) != nil {
-			return &http_status{400, "corrupt content format"}
-		}
-
-		result, err := tx.Exec("INSERT INTO channels (name) VALUES (?)", channel_info.Name)
-
-		if err != nil {
-			tx.Rollback()
-			return &http_status{500, err.Error()}
-		}
-
-		channel_id, err := result.LastInsertId()
-
-		if err != nil {
-			tx.Rollback()
-			return &http_status{500, err.Error()}
-		}
-
-		channel_info.Members = append(channel_info.Members, subject)
-
-		for _, person_id := range channel_info.Members {
-			if _, err = tx.Exec("INSERT INTO participations (person, channel) VALUES (?, ?)", person_id, channel_id); err != nil {
-				tx.Rollback()
-				return &http_status{500, err.Error()}
-			}
-		}
-
-		if err := tx.Commit(); err != nil {
-			return &http_status{500, err.Error()}
-		}
-
-		fmt.Fprintf(writer, "%d", channel_id)
-
-		return nil
+	if parameter == "" {
+		return endpoint_channels_without_parameter(subject, writer, request)
 	}
 
 	parameter_splited := strings.SplitN(parameter, "/", 2)
@@ -203,4 +123,91 @@ func endpoint_channels(writer http.ResponseWriter, request *http.Request) *http_
 	writer.Write(buffer)
 
 	return nil
+}
+
+func endpoint_channels_without_parameter(subject string, writer http.ResponseWriter, request *http.Request) *http_status {
+	switch request.Method {
+	case "GET":
+		rows, err := db.Query("SELECT id, name FROM participations, channels WHERE person = ? AND channel = id", subject)
+
+		var channel Channel
+
+		channels := make([]Channel, 0, 16)
+
+		for rows.Next() {
+			if err := rows.Scan(&channel.Id, &channel.Name); err != nil {
+				return &http_status{500, err.Error()}
+			}
+
+			channels = append(channels, channel)
+		}
+
+		buffer, err := json.Marshal(channels)
+
+		if err != nil {
+			return &http_status{500, err.Error()}
+		}
+
+		writer.Header().Set("Content-Type", "application/json")
+		writer.Write(buffer)
+
+		return nil
+	case "POST":
+		tx, err := db.Begin()
+
+		if err != nil {
+			return &http_status{500, err.Error()}
+		}
+
+		var channel_info struct {Name string; Members []string}
+
+		if request.Header.Get("Content-Type") != "application/json" {
+			return &http_status{415, "bad content type"}
+		}
+
+		buffer, err := ioutil.ReadAll(request.Body)
+		
+		if err != nil {
+			return &http_status{400, "invalid content stream"}
+		}
+
+		request.Body.Close()
+
+		if json.Unmarshal(buffer, &channel_info) != nil {
+			return &http_status{400, "corrupt content format"}
+		}
+
+		result, err := tx.Exec("INSERT INTO channels (name) VALUES (?)", channel_info.Name)
+
+		if err != nil {
+			tx.Rollback()
+			return &http_status{500, err.Error()}
+		}
+
+		channel_id, err := result.LastInsertId()
+
+		if err != nil {
+			tx.Rollback()
+			return &http_status{500, err.Error()}
+		}
+
+		channel_info.Members = append(channel_info.Members, subject)
+
+		for _, person_id := range channel_info.Members {
+			if _, err = tx.Exec("INSERT INTO participations (person, channel) VALUES (?, ?)", person_id, channel_id); err != nil {
+				tx.Rollback()
+				return &http_status{500, err.Error()}
+			}
+		}
+
+		if err := tx.Commit(); err != nil {
+			return &http_status{500, err.Error()}
+		}
+
+		fmt.Fprintf(writer, "%d", channel_id)
+
+		return nil
+	default:
+		return &http_status{405, "method not allowed"}
+	}
 }
