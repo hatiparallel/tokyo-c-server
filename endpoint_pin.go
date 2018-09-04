@@ -2,23 +2,23 @@ package main
 
 import (
 	"encoding/json"
-	"time"
 	"math/rand"
 	"net/http"
 	"sync"
+	"time"
 )
 
 type pin_ticket struct {
-	pin int
-	owner string
+	pin      int
+	owner    string
 	pendings map[string]bool
-	channel chan string
-	mutex *sync.Mutex
+	channel  chan string
+	mutex    *sync.Mutex
 }
 
 type pin_event struct {
-	Type string
-	PIN int
+	Type   string
+	PIN    int
 	Person string
 }
 
@@ -45,7 +45,7 @@ func endpoint_pin(writer http.ResponseWriter, request *http.Request) *http_statu
 		var pin int
 
 		for {
-			pin = int(10000000 + rand.Int31() % 90000000)
+			pin = int(10000000 + rand.Int31()%90000000)
 
 			if _, exists := pin_table.by_pin[pin]; !exists {
 				break
@@ -65,7 +65,7 @@ func endpoint_pin(writer http.ResponseWriter, request *http.Request) *http_statu
 		writer.Header().Set("Transfer-Encoding", "chunked")
 
 		flusher, flushable := writer.(http.Flusher)
-		
+
 		if !flushable {
 			return &http_status{400, "streaming cannot be established"}
 		}

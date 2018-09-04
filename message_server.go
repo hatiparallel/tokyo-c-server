@@ -29,7 +29,7 @@ func (server *MessageServer) handle_request(writer http.ResponseWriter, request 
 		writer.Header().Set("Transfer-Encoding", "chunked")
 
 		flusher, flushable := writer.(http.Flusher)
-		
+
 		if !flushable {
 			return &http_status{400, "streaming cannot be established"}
 		}
@@ -56,7 +56,7 @@ func (server *MessageServer) handle_request(writer http.ResponseWriter, request 
 		}
 
 		buffer, err := ioutil.ReadAll(request.Body)
-		
+
 		if err != nil {
 			return &http_status{400, "invalid content stream"}
 		}

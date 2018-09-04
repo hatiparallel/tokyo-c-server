@@ -2,9 +2,9 @@ package main
 
 import (
 	"encoding/json"
+	"net/http"
 	"strconv"
 	"strings"
-	"net/http"
 )
 
 func endpoint_messages(writer http.ResponseWriter, request *http.Request) *http_status {

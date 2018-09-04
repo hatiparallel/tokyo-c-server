@@ -8,13 +8,13 @@ import (
 	"net/http"
 	"os"
 	"strconv"
-	"time"
 	"sync"
+	"time"
 
-	"golang.org/x/net/context"
 	"firebase.google.com/go"
 	firebase_auth "firebase.google.com/go/auth"
 	_ "github.com/go-sql-driver/mysql"
+	"golang.org/x/net/context"
 
 	"google.golang.org/api/option"
 )
@@ -26,18 +26,18 @@ type http_status struct {
 
 var message_server *MessageServer
 var pin_table struct {
-	by_pin map[int]*pin_ticket
+	by_pin   map[int]*pin_ticket
 	by_owner map[string]*pin_ticket
-	mutex *sync.Mutex
+	mutex    *sync.Mutex
 }
 var db *sql.DB
 var idp *firebase_auth.Client
 
 func main() {
 	var (
-		err error
-		port    int
-		pidfile string
+		err                  error
+		port                 int
+		pidfile              string
 		firebase_credentials string
 	)
 

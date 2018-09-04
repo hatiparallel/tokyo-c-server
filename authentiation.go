@@ -1,10 +1,10 @@
 package main
 
 import (
-	"strings"
 	"errors"
-	"net/http"
 	"fmt"
+	"net/http"
+	"strings"
 
 	"golang.org/x/net/context"
 )
@@ -29,7 +29,7 @@ func authenticate(request *http.Request, subject *string) error {
 	verified, err := idp.VerifyIDToken(context.Background(), token)
 
 	if err != nil {
-		return errors.New("invalid token: "+err.Error())
+		return errors.New("invalid token: " + err.Error())
 	}
 
 	*subject = verified.UID

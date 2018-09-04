@@ -1,9 +1,9 @@
 package main
 
 import (
-	"strings"
-	"net/http"
 	"encoding/json"
+	"net/http"
+	"strings"
 
 	"golang.org/x/net/context"
 )
@@ -22,7 +22,7 @@ func endpoint_people(writer http.ResponseWriter, request *http.Request) *http_st
 	record, err := idp.GetUser(context.Background(), parameter)
 
 	if err != nil {
-		return &http_status{500, "firebase failed: "+err.Error()}
+		return &http_status{500, "firebase failed: " + err.Error()}
 	}
 
 	buffer, err := json.Marshal(record)

@@ -1,9 +1,9 @@
 package main
 
 import (
-	"net/http"
+	"encoding/json"
 	"fmt"
-	 "encoding/json"
+	"net/http"
 )
 
 func endpoint_status(writer http.ResponseWriter, request *http.Request) *http_status {
@@ -23,7 +23,7 @@ func endpoint_status(writer http.ResponseWriter, request *http.Request) *http_st
 
 	var status struct {
 		FriendshipCount int
-		Latests map[int]int
+		Latests         map[int]int
 	}
 
 	status.Latests = make(map[int]int)

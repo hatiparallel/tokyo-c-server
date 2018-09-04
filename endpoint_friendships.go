@@ -1,11 +1,11 @@
 package main
 
 import (
-	"strconv"
 	"encoding/json"
-	"strings"
-	"net/http"
 	"io/ioutil"
+	"net/http"
+	"strconv"
+	"strings"
 )
 
 func endpoint_friendships(writer http.ResponseWriter, request *http.Request) *http_status {
@@ -13,7 +13,7 @@ func endpoint_friendships(writer http.ResponseWriter, request *http.Request) *ht
 
 	err := authenticate(request, &subject)
 
-	if err!= nil {
+	if err != nil {
 		return &http_status{401, err.Error()}
 	}
 

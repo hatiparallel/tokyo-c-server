@@ -1,12 +1,12 @@
 package main
 
 import (
-	"fmt"
 	"encoding/json"
+	"fmt"
+	"io/ioutil"
+	"net/http"
 	"strconv"
 	"strings"
-	"net/http"
-	"io/ioutil"
 )
 
 func endpoint_channels(writer http.ResponseWriter, request *http.Request) *http_status {
@@ -163,14 +163,17 @@ func endpoint_channels_without_parameter(subject string, writer http.ResponseWri
 			return &http_status{500, err.Error()}
 		}
 
-		var channel_info struct {Name string; Members []string}
+		var channel_info struct {
+			Name    string
+			Members []string
+		}
 
 		if request.Header.Get("Content-Type") != "application/json" {
 			return &http_status{415, "bad content type"}
 		}
 
 		buffer, err := ioutil.ReadAll(request.Body)
-		
+
 		if err != nil {
 			return &http_status{400, "invalid content stream"}
 		}
