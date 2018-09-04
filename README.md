@@ -38,14 +38,20 @@ JSON messages will be accepted:
 ## Endpoints
 
 * **GET** /streams/_channel_ gives a realtime stream of messages of _channel_.
+	* Response (application/json stream): Message (data_types.go)
 * **POST** /streams/_channel_ takes a message and broadcast it on _channel_
    * Payload (application/json): {IsEvent int; Content string}
 * **GET** /messages/_channel_?since_id=_id_ gives a pile of messages of _channel_ since _id_.
+	* Response (application/json): []Message (data_types.go)
 * **GET** /friendships/ gives a friend list of the current user.
-* **PUT** /friendships/_person_ makes a friendship from the current user to _person_.
+	* Repsponse (application/json): []string
+* **POST** /friendships/ takes PIN and sends a request to the owner.
+	* Payload (text/plain): PIN code
+* **PUT** /friendships/_person_ makes a friendship from the current user to _person_ (requiring that _person_ send a request with PIN).
 * **DELETE** /friendships/_person_ dissolves a friendship from the current user to _person_.
 * **GET** /channels/ gives a channel list the current user is participating in.
+	* Response (application/json): {Name string; Members []string}
 * **POST** /channels/ makes a new channel with the only participant being the current user.
-   * Payload (application/x-www-form-urlencoded): {name string}
-* **POST** /channels/_channel_ makes the current user participate in _channel_.
-* **DELETE** /channels/_channel_ makes the current user withdraw from _channel_. (the channel will perish if the current user is the last participant).
+   * Payload (application/json): {Name string; Members [] string}
+* **PUT** /channels/_channel_/_person_ makes _person_ participate in _channel_ (requiring that the current user be a member).
+* **DELETE** /channels/_channel_/_person_ makes _person_ withdraw from _channel_. (requiring that the current user be a member. the channel will perish if the current user is the last participant).
