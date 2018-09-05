@@ -2,9 +2,9 @@ package main
 
 import (
 	"encoding/json"
+	"net/http"
 	"strconv"
 	"strings"
-	"net/http"
 )
 
 func endpoint_messages(writer http.ResponseWriter, request *http.Request) *http_status {
@@ -42,6 +42,8 @@ func endpoint_messages(writer http.ResponseWriter, request *http.Request) *http_
 
 	var message Message
 
+	messages := make([]Message, 32)
+
 	for rows.Next() {
 		err := rows.Scan(&message.Id, &message.Channel, &message.Author, &message.IsEvent, &message.PostedAt, &message.Content)
 
@@ -49,15 +51,17 @@ func endpoint_messages(writer http.ResponseWriter, request *http.Request) *http_
 			return &http_status{500, err.Error()}
 		}
 
-		buffer, err := json.Marshal(message)
-
-		if err != nil {
-			return &http_status{500, err.Error()}
-		}
-
-		writer.Header().Set("Content-Type", "application/json")
-		writer.Write(buffer)
+		messages = append(messages, message)
 	}
+
+	buffer, err := json.Marshal(message)
+
+	if err != nil {
+		return &http_status{500, err.Error()}
+	}
+
+	writer.Header().Set("Content-Type", "application/json")
+	writer.Write(buffer)
 
 	return nil
 }
