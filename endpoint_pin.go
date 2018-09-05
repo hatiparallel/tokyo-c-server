@@ -35,32 +35,24 @@ func endpoint_pin(writer http.ResponseWriter, request *http.Request) *http_statu
 	case "GET":
 		pin_table.mutex.Lock()
 
-		if ticket, exists := pin_table.by_owner[subject]; exists {
+		ticket, exists := pin_table.by_owner[subject]
+
+		if !exists {
+			ticket = issue_ticket(subject)
+			pin_table.by_pin[ticket.pin] = ticket
+			pin_table.by_owner[subject] = ticket
+		}
+
+		pin_table.mutex.Unlock()
+
+		defer func() {
+			close(ticket.channel)
+
+			pin_table.mutex.Lock()
 			delete(pin_table.by_owner, subject)
 			delete(pin_table.by_pin, ticket.pin)
-		}
-
-		rand.Seed(time.Now().UnixNano())
-
-		var pin int
-
-		for {
-			pin = int(10000000 + rand.Int31()%90000000)
-
-			if _, exists := pin_table.by_pin[pin]; !exists {
-				break
-			}
-		}
-
-		ticket := new(pin_ticket)
-		ticket.pin = pin
-		ticket.owner = subject
-		ticket.pendings = make(map[string]bool)
-		ticket.channel = make(chan string)
-		ticket.mutex = new(sync.Mutex)
-		pin_table.by_pin[pin] = ticket
-		pin_table.by_owner[subject] = ticket
-		pin_table.mutex.Unlock()
+			pin_table.mutex.Unlock()
+		}()
 
 		writer.Header().Set("Transfer-Encoding", "chunked")
 
@@ -71,13 +63,22 @@ func endpoint_pin(writer http.ResponseWriter, request *http.Request) *http_statu
 		}
 
 		encoder := json.NewEncoder(writer)
+		ticker := time.Tick(3 * time.Second)
 
-		encoder.Encode(&pin_event{"pin", pin, ""})
+		encoder.Encode(&pin_event{"pin", ticket.pin, ""})
 		flusher.Flush()
 
+	LOOP:
 		for {
-			if encoder.Encode(&pin_event{"request", 0, <-ticket.channel}) != nil {
-				break
+			select {
+			case <-ticker:
+				if encoder.Encode(&pin_event{"noop", 0, ""}) != nil {
+					break LOOP
+				}
+			case person_id := <-ticket.channel:
+				if encoder.Encode(&pin_event{"request", 0, person_id}) != nil {
+					break LOOP
+				}
 			}
 
 			flusher.Flush()
@@ -87,4 +88,27 @@ func endpoint_pin(writer http.ResponseWriter, request *http.Request) *http_statu
 	default:
 		return &http_status{405, "method not allowed"}
 	}
+}
+
+func issue_ticket(owner string) *pin_ticket {
+	var pin int
+
+	rand.Seed(time.Now().UnixNano())
+
+	for {
+		pin = int(10000000 + rand.Int31()%90000000)
+
+		if _, exists := pin_table.by_pin[pin]; !exists {
+			break
+		}
+	}
+
+	ticket := new(pin_ticket)
+	ticket.pin = pin
+	ticket.owner = owner
+	ticket.pendings = make(map[string]bool)
+	ticket.channel = make(chan string)
+	ticket.mutex = new(sync.Mutex)
+
+	return ticket
 }
