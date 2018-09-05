@@ -38,7 +38,7 @@ JSON messages will be accepted:
 ## Endpoints
 
 * **GET** /streams/_channel_ gives a realtime stream of messages of _channel_.
-	* Response (application/json stream): Message (data_types.go)
+	* Response (application/json stream): Refer to [Message (data_types.go)](https://github.com/line-school2018summer/tokyo-c-server/blob/5c05c4d47493a86547a8299e34c99e750a4a6058/data_types.go#L12)
 * **POST** /streams/_channel_ takes a message and broadcast it on _channel_
    * Payload (application/json): {IsEvent int; Content string}
 * **GET** /messages/_channel_?since_id=_id_ gives a pile of messages of _channel_ since _id_.
