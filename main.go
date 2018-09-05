@@ -93,9 +93,7 @@ func main() {
 	})
 
 	http.HandleFunc("/streams/", func(writer http.ResponseWriter, request *http.Request) {
-		var subject string
-
-		err := authenticate(request, &subject)
+		_, err := authenticate(request)
 
 		if err != nil {
 			writer.WriteHeader(401)

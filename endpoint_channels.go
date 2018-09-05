@@ -10,9 +10,7 @@ import (
 )
 
 func endpoint_channels(writer http.ResponseWriter, request *http.Request) *http_status {
-	var subject string
-
-	err := authenticate(request, &subject)
+	subject, err := authenticate(request)
 
 	if err != nil {
 		return &http_status{401, err.Error()}
@@ -92,7 +90,7 @@ func endpoint_channels(writer http.ResponseWriter, request *http.Request) *http_
 	row := db.QueryRow("SELECT name FROM channels WHERE id = ?", channel_id)
 
 	var channel struct {
-		Name         string
+		Name    string
 		Members []string
 	}
 
