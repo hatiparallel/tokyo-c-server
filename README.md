@@ -56,4 +56,4 @@ JSON messages will be accepted:
 * **PUT** /channels/_channel_/_person_ makes _person_ participate in _channel_ (requiring that the current user be a member).
 * **DELETE** /channels/_channel_/_person_ makes _person_ withdraw from _channel_. (requiring that the current user be a member. the channel will perish if the current user is the last participant).
 * **GET** /pin gives a realtime stream of event messages
-	* Response (application/json stream): {Type string; PIN int; Person string} (Type is `pin` or `request`)
+	* Response (application/json stream): {Type string; PIN int; Person string} (Type is `pin` -> `request` or `noop`)
