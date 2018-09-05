@@ -9,9 +9,7 @@ import (
 )
 
 func endpoint_people(writer http.ResponseWriter, request *http.Request) *http_status {
-	var subject string
-
-	err := authenticate(request, &subject)
+	_, err := authenticate(request)
 
 	if err != nil {
 		return &http_status{401, err.Error()}
