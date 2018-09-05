@@ -57,3 +57,7 @@ JSON messages will be accepted:
 * **DELETE** /channels/_channel_/_person_ makes _person_ withdraw from _channel_. (requiring that the current user be a member. the channel will perish if the current user is the last participant).
 * **GET** /pin gives a realtime stream of event messages
 	* Response (application/json stream): {Type string; PIN int; Person string} (Type is `pin` -> `request` or `noop`)
+* **GET** /people/_person_ gives a firebase user info of _person_
+	* Response (application/json): Refer to [firebase/auth.UserInfo](https://godoc.org/firebase.google.com/go/auth#UserInfo)
+* **GET** /status gives the current status of the current user
+	* Response (application/json): {FriendshipCount int; Latests map[int]int}
