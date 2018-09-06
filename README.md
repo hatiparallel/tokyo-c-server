@@ -28,25 +28,24 @@ Execute `DATABASE_TYPE=mysql DATABASE_URI="root:PASSWORD@tcp(127.0.0.1)/tokyoC_D
 
 ## Make a Listen
 Just execute
-`curl http://localhost:9000/streams/12345`.
+`curl http://localhost:9000/messages/12345`.
 
 ## Publish a Message
 
 JSON messages will be accepted:
-`curl -X POST -H'Authorization: Bearer token' -H'Content-Type: application/json' -d '{"Content":"Hello, world!"}' http://localhost:9000/streams/12345`.
+`curl -X POST -H'Authorization: Bearer token' -H'Content-Type: application/json' -d '{"Content":"Hello, world!"}' http://localhost:9000/messages/12345`.
 
 ## Endpoints
 
-* **GET** /streams/_channel_ gives a realtime stream of messages of _channel_.
+* **GET** /messages/_channel_ gives a realtime stream of messages of _channel_.
+	* Parameters: `since_id` specifies a message id from which digging message archive starts.
 	* Response (application/json stream): Refer to [Message (data_types.go)](https://github.com/line-school2018summer/tokyo-c-server/blob/5c05c4d47493a86547a8299e34c99e750a4a6058/data_types.go#L12)
-* **POST** /streams/_channel_ takes a message and broadcast it on _channel_
+* **POST** /messages/_channel_ takes a message and broadcast it on _channel_
    * Payload (application/json): {IsEvent int; Content string}
-* **GET** /messages/_channel_?since_id=_id_ gives a pile of messages of _channel_ since _id_.
-	* Response (application/json): []Message (data_types.go)
 * **GET** /friendships/ gives a friend list of the current user.
 	* Repsponse (application/json): []string
 * **POST** /friendships/ takes PIN and sends a request to the owner.
-	* Payload (text/plain): PIN code
+	* Payload (application/json): PIN code
 * **PUT** /friendships/_person_ makes a friendship from the current user to _person_ (requiring that _person_ send a request with PIN).
 * **DELETE** /friendships/_person_ dissolves a friendship from the current user to _person_.
 * **GET** /channels/ gives a channel list the current user is participating in.
