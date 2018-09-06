@@ -16,10 +16,6 @@ func endpoint_channels(writer http.ResponseWriter, request *http.Request) *http_
 		return &http_status{401, err.Error()}
 	}
 
-	if err := request.ParseForm(); err != nil {
-		return &http_status{401, "auth failed"}
-	}
-
 	parameter := strings.TrimPrefix(request.URL.Path, "/channels/")
 
 	if parameter == "" {
