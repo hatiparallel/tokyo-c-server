@@ -8,21 +8,7 @@ import (
 	"time"
 )
 
-type pin_ticket struct {
-	pin      int
-	owner    string
-	pendings map[string]bool
-	channel  chan string
-	mutex    *sync.Mutex
-}
-
-type pin_event struct {
-	Type   string
-	PIN    int
-	Person string
-}
-
-func endpoint_pin(writer http.ResponseWriter, request *http.Request) *http_status {
+func endpoint_pin(request *http.Request) *http_status {
 	subject, err := authenticate(request)
 
 	if err != nil {
@@ -43,46 +29,32 @@ func endpoint_pin(writer http.ResponseWriter, request *http.Request) *http_statu
 
 		pin_table.mutex.Unlock()
 
-		defer func() {
+		return &http_status{200, func(encoder *json.Encoder) {
+			ticker := time.Tick(3 * time.Second)
+
+			encoder.Encode(&pin_event{"pin", ticket.pin, ""})
+
+		LOOP:
+			for {
+				select {
+				case <-ticker:
+					if encoder.Encode(&pin_event{"noop", 0, ""}) != nil {
+						break LOOP
+					}
+				case person_id := <-ticket.channel:
+					if encoder.Encode(&pin_event{"request", 0, person_id}) != nil {
+						break LOOP
+					}
+				}
+			}
+
 			close(ticket.channel)
 
 			pin_table.mutex.Lock()
 			delete(pin_table.by_owner, subject)
 			delete(pin_table.by_pin, ticket.pin)
 			pin_table.mutex.Unlock()
-		}()
-
-		writer.Header().Set("Transfer-Encoding", "chunked")
-
-		flusher, flushable := writer.(http.Flusher)
-
-		if !flushable {
-			return &http_status{400, "streaming cannot be established"}
-		}
-
-		encoder := json.NewEncoder(writer)
-		ticker := time.Tick(3 * time.Second)
-
-		encoder.Encode(&pin_event{"pin", ticket.pin, ""})
-		flusher.Flush()
-
-	LOOP:
-		for {
-			select {
-			case <-ticker:
-				if encoder.Encode(&pin_event{"noop", 0, ""}) != nil {
-					break LOOP
-				}
-			case person_id := <-ticket.channel:
-				if encoder.Encode(&pin_event{"request", 0, person_id}) != nil {
-					break LOOP
-				}
-			}
-
-			flusher.Flush()
-		}
-
-		return nil
+		}}
 	default:
 		return &http_status{405, "method not allowed"}
 	}
