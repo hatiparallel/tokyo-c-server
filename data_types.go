@@ -1,19 +1,45 @@
 package main
 
 import (
+	"sync"
 	"time"
 )
 
+type http_status struct {
+	code int
+	body interface{}
+}
+
+type pin_ticket struct {
+	pin      int
+	owner    string
+	pendings map[string]bool
+	channel  chan string
+	mutex    *sync.Mutex
+}
+
+type pin_event struct {
+	Type   string
+	PIN    int
+	Person string
+}
+
 type Channel struct {
-	Id   int64
-	Name string
+	Id      int
+	Name    string
+	Members []string
 }
 
 type Message struct {
-	Id       int64
-	Channel  int64
+	Id       int
+	Channel  int
 	Author   string
 	IsEvent  int
 	PostedAt time.Time
 	Content  string
+}
+
+type Status struct {
+	FriendshipCount int
+	Latests         map[int]int
 }
