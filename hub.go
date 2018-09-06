@@ -6,23 +6,23 @@ import (
 
 type Hub struct {
 	mutex     *sync.RWMutex
-	listeners map[chan Message]int64
-	stamper   func(int64, *Message) error
+	listeners map[chan Message]int
+	stamper   func(int, *Message) error
 }
 
-func NewHub(stamper func(int64, *Message) error) *Hub {
+func NewHub(stamper func(int, *Message) error) *Hub {
 	return &Hub{
 		new(sync.RWMutex),
-		make(map[chan Message]int64),
+		make(map[chan Message]int),
 		stamper,
 	}
 }
 
-func (hub *Hub) Stamp(channel int64, message *Message) error {
+func (hub *Hub) Stamp(channel int, message *Message) error {
 	return hub.stamper(channel, message)
 }
 
-func (hub *Hub) Subscribe(channel int64, listener chan Message) {
+func (hub *Hub) Subscribe(channel int, listener chan Message) {
 	hub.mutex.Lock()
 	defer hub.mutex.Unlock()
 
@@ -31,7 +31,7 @@ func (hub *Hub) Subscribe(channel int64, listener chan Message) {
 	return
 }
 
-func (hub *Hub) Publish(channel int64, message *Message) (err error) {
+func (hub *Hub) Publish(channel int, message *Message) (err error) {
 	hub.mutex.RLock()
 	defer hub.mutex.RUnlock()
 
