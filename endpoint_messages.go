@@ -7,59 +7,85 @@ import (
 	"strings"
 )
 
-func endpoint_messages(writer http.ResponseWriter, request *http.Request) *http_status {
+func endpoint_messages(request *http.Request) *http_status {
 	_, err := authenticate(request)
 
 	if err != nil {
 		return &http_status{401, err.Error()}
 	}
 
-	if request.Method != "GET" {
-		return &http_status{405, "method not allowed"}
-	}
-
 	channel_id, err := strconv.Atoi(strings.TrimPrefix(request.URL.Path, "/messages/"))
 
 	if err != nil {
-		return &http_status{400, "invalid channel name"}
+		return &http_status{400, "invalid channel id"}
 	}
 
-	since_id, err := strconv.Atoi(request.FormValue("since_id"))
+	switch request.Method {
+	case "GET":
+		since_id, _ := strconv.Atoi(request.FormValue("since_id"))
 
-	if err != nil {
-		return &http_status{400, "invalid since_id"}
-	}
+		if since_id > 0 {
+			rows, err := db.Query("SELECT id, channel, author, is_event, posted_at, content FROM messages WHERE channel = ? AND id > ?", channel_id, since_id)
 
-	rows, err := db.Query("SELECT id, channel, author, is_event, posted_at, content FROM messages WHERE channel = ? AND id > ?", channel_id, since_id)
+			if err != nil {
+				return &http_status{500, err.Error()}
+			}
 
-	if err != nil {
-		return &http_status{500, err.Error()}
-	}
+			return &http_status{200, func(encoder *json.Encoder) {
+				var message Message
 
-	defer rows.Close()
+				for rows.Next() {
+					if rows.Scan(&message.Id, &message.Channel, &message.Author, &message.IsEvent, &message.PostedAt, &message.Content) != nil {
+						break
+					}
 
-	var message Message
+					encoder.Encode(message)
+				}
 
-	messages := make([]Message, 32)
+				rows.Close()
 
-	for rows.Next() {
-		err := rows.Scan(&message.Id, &message.Channel, &message.Author, &message.IsEvent, &message.PostedAt, &message.Content)
+				listener := make(chan Message)
+
+				hub.Subscribe(channel_id, listener)
+				defer hub.Unsubscribe(listener)
+
+				for {
+					if encoder.Encode(<-listener) != nil {
+						break
+					}
+				}
+			}}
+		} else {
+			return &http_status{200, func(encoder *json.Encoder) {
+				listener := make(chan Message)
+
+				hub.Subscribe(channel_id, listener)
+				defer hub.Unsubscribe(listener)
+
+				for {
+					if encoder.Encode(<-listener) != nil {
+						break
+					}
+				}
+			}}
+		}
+	case "POST":
+		var message Message
+
+		err := decode_payload(request, &message)
+
+		if err != nil {
+			return &http_status{400, err.Error()}
+		}
+
+		err = hub.Publish(channel_id, &message)
 
 		if err != nil {
 			return &http_status{500, err.Error()}
 		}
 
-		messages = append(messages, message)
+		return &http_status{200, message}
+	default:
+		return &http_status{405, "method not allowed"}
 	}
-
-	buffer, err := json.Marshal(message)
-
-	if err != nil {
-		return &http_status{500, err.Error()}
-	}
-
-	writer.Header().Set("Content-Type", "application/json")
-	writer.Write(buffer)
-
-	return nil
 }

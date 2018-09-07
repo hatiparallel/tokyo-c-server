@@ -1,12 +1,10 @@
 package main
 
 import (
-	"encoding/json"
-	"fmt"
 	"net/http"
 )
 
-func endpoint_status(writer http.ResponseWriter, request *http.Request) *http_status {
+func endpoint_status(request *http.Request) *http_status {
 	subject, err := authenticate(request)
 
 	if err != nil {
@@ -19,10 +17,7 @@ func endpoint_status(writer http.ResponseWriter, request *http.Request) *http_st
 		return &http_status{500, err.Error()}
 	}
 
-	var status struct {
-		FriendshipCount int
-		Latests         map[int]int
-	}
+	var status Status
 
 	status.Latests = make(map[int]int)
 
@@ -46,10 +41,5 @@ func endpoint_status(writer http.ResponseWriter, request *http.Request) *http_st
 		return &http_status{500, err.Error()}
 	}
 
-	buffer, err := json.Marshal(status)
-
-	writer.Header().Set("Content-Type", "application/json")
-	fmt.Fprintln(writer, string(buffer))
-
-	return nil
+	return &http_status{200, status}
 }

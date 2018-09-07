@@ -2,9 +2,12 @@ package main
 
 import (
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
+	"io"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"strconv"
@@ -19,17 +22,13 @@ import (
 	"google.golang.org/api/option"
 )
 
-type http_status struct {
-	code    int
-	message string
-}
-
-var message_server *MessageServer
 var pin_table struct {
 	by_pin   map[int]*pin_ticket
 	by_owner map[string]*pin_ticket
 	mutex    *sync.Mutex
 }
+
+var hub *Hub
 var db *sql.DB
 var idp *firebase_auth.Client
 
@@ -47,11 +46,11 @@ func main() {
 
 	flag.Parse()
 
+	hub = NewHub(stamp_message)
+
 	pin_table.by_pin = make(map[int]*pin_ticket)
 	pin_table.by_owner = make(map[string]*pin_ticket)
 	pin_table.mutex = new(sync.Mutex)
-
-	message_server = NewMessageServer(stamp_message)
 
 	db, err = sql.Open(os.Getenv("DATABASE_TYPE"), os.Getenv("DATABASE_URI")+"?parseTime=true")
 
@@ -74,66 +73,21 @@ func main() {
 		return
 	}
 
-	http.HandleFunc("/", func(writer http.ResponseWriter, request *http.Request) {
-		fmt.Fprintln(writer, "Hello, this is Tokyo C Server. It works!")
-	})
+	endpoints := map[string]func(*http.Request) *http_status{
+		"/": func(_ *http.Request) *http_status {
+			return &http_status{200, "Hello, this is Tokyo C Server."}
+		},
+		"/friendships/": endpoint_friendships,
+		"/channels/":    endpoint_channels,
+		"/messages/":    endpoint_messages,
+		"/people/":      endpoint_people,
+		"/pin":          endpoint_pin,
+		"/status":       endpoint_status,
+	}
 
-	http.HandleFunc("/friendships/", func(writer http.ResponseWriter, request *http.Request) {
-		if status := endpoint_friendships(writer, request); status != nil {
-			writer.WriteHeader(status.code)
-			fmt.Fprintln(writer, status.message)
-		}
-	})
-
-	http.HandleFunc("/channels/", func(writer http.ResponseWriter, request *http.Request) {
-		if status := endpoint_channels(writer, request); status != nil {
-			writer.WriteHeader(status.code)
-			fmt.Fprintln(writer, status.message)
-		}
-	})
-
-	http.HandleFunc("/streams/", func(writer http.ResponseWriter, request *http.Request) {
-		_, err := authenticate(request)
-
-		if err != nil {
-			writer.WriteHeader(401)
-			fmt.Fprintln(writer, err.Error())
-			return
-		}
-
-		if status := message_server.handle_request(writer, request); status != nil {
-			writer.WriteHeader(status.code)
-			fmt.Fprintln(writer, status.message)
-		}
-	})
-
-	http.HandleFunc("/messages/", func(writer http.ResponseWriter, request *http.Request) {
-		if status := endpoint_messages(writer, request); status != nil {
-			writer.WriteHeader(status.code)
-			fmt.Fprintln(writer, status.message)
-		}
-	})
-
-	http.HandleFunc("/people/", func(writer http.ResponseWriter, request *http.Request) {
-		if status := endpoint_people(writer, request); status != nil {
-			writer.WriteHeader(status.code)
-			fmt.Fprintln(writer, status.message)
-		}
-	})
-
-	http.HandleFunc("/pin", func(writer http.ResponseWriter, request *http.Request) {
-		if status := endpoint_pin(writer, request); status != nil {
-			writer.WriteHeader(status.code)
-			fmt.Fprintln(writer, status.message)
-		}
-	})
-
-	http.HandleFunc("/status", func(writer http.ResponseWriter, request *http.Request) {
-		if status := endpoint_status(writer, request); status != nil {
-			writer.WriteHeader(status.code)
-			fmt.Fprintln(writer, status.message)
-		}
-	})
+	for path, handler := range endpoints {
+		http.HandleFunc(path, build_handler(handler))
+	}
 
 	if file, err := os.OpenFile(pidfile, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0755); err == nil {
 		fmt.Fprintf(file, "%d\n", os.Getpid())
@@ -151,7 +105,58 @@ func main() {
 	}
 }
 
-func stamp_message(channel_id int64, message *Message) error {
+func build_handler(handler func(*http.Request) *http_status) func(http.ResponseWriter, *http.Request) {
+	return func(writer http.ResponseWriter, request *http.Request) {
+		status := handler(request)
+
+		if status == nil {
+			return
+		}
+
+		writer.Header().Set("Content-Type", "application/json")
+
+		if start_stream, ok := status.body.(func(*json.Encoder)); ok {
+			flusher, flushable := writer.(http.Flusher)
+
+			if !flushable {
+				writer.WriteHeader(400)
+				writer.Write([]byte("streaming cannot be established"))
+				return
+			}
+
+			writer.Header().Set("Transfer-Encoding", "chunked")
+			writer.WriteHeader(status.code)
+			start_stream(json.NewEncoder(&immediate_writer{writer, flusher}))
+		} else {
+			writer.WriteHeader(status.code)
+			json.NewEncoder(writer).Encode(status.body)
+		}
+	}
+}
+
+func decode_payload(request *http.Request, pointer interface{}) error {
+	if request.Header.Get("Content-Type") != "application/json" {
+		return errors.New("bad content type")
+	}
+
+	buffer, err := ioutil.ReadAll(request.Body)
+
+	if err != nil {
+		return errors.New("invalid content stream: " + err.Error())
+	}
+
+	request.Body.Close()
+
+	err = json.Unmarshal(buffer, pointer)
+
+	if err != nil {
+		return errors.New("corrupt content format: " + err.Error())
+	}
+
+	return nil
+}
+
+func stamp_message(channel_id int, message *Message) error {
 	message.Channel = channel_id
 	message.PostedAt = time.Now()
 
@@ -163,13 +168,24 @@ func stamp_message(channel_id int64, message *Message) error {
 		return errors.New("failed to store message because... " + err.Error())
 	}
 
-	id, err := result.LastInsertId()
+	last_insert_id, err := result.LastInsertId()
 
 	if err != nil {
 		return errors.New("failed to get message id")
 	}
 
-	message.Id = id
+	message.Id = int(last_insert_id)
 
 	return nil
+}
+
+type immediate_writer struct {
+	writer  io.Writer
+	flusher http.Flusher
+}
+
+func (iw *immediate_writer) Write(b []byte) (n int, err error) {
+	n, err = iw.writer.Write(b)
+	iw.flusher.Flush()
+	return
 }

@@ -1,29 +1,22 @@
 package main
 
 import (
-	"encoding/json"
-	"fmt"
-	"io/ioutil"
 	"net/http"
 	"strconv"
 	"strings"
 )
 
-func endpoint_channels(writer http.ResponseWriter, request *http.Request) *http_status {
+func endpoint_channels(request *http.Request) *http_status {
 	subject, err := authenticate(request)
 
 	if err != nil {
 		return &http_status{401, err.Error()}
 	}
 
-	if err := request.ParseForm(); err != nil {
-		return &http_status{401, "auth failed"}
-	}
-
 	parameter := strings.TrimPrefix(request.URL.Path, "/channels/")
 
 	if parameter == "" {
-		return endpoint_channels_without_parameter(subject, writer, request)
+		return endpoint_channels_without_parameter(subject, request)
 	}
 
 	parameter_splited := strings.SplitN(parameter, "/", 2)
@@ -54,13 +47,13 @@ func endpoint_channels(writer http.ResponseWriter, request *http.Request) *http_
 			return &http_status{500, err.Error()}
 		}
 
-		message_server.listeners.Publish(int64(channel_id), &Message{IsEvent: 1, Content: "join"})
+		hub.Publish(channel_id, &Message{IsEvent: 1, Content: "join"})
 	case "DELETE":
 		if _, err := db.Exec("DELETE FROM memberships WHERE channel = ? AND person = ?", channel_id, person_id); err != nil {
 			return &http_status{500, err.Error()}
 		}
 
-		message_server.listeners.Publish(int64(channel_id), &Message{IsEvent: 1, Content: "leave"})
+		hub.Publish(channel_id, &Message{IsEvent: 1, Content: "leave"})
 
 		tx, err := db.Begin()
 
@@ -89,10 +82,7 @@ func endpoint_channels(writer http.ResponseWriter, request *http.Request) *http_
 
 	row := db.QueryRow("SELECT name FROM channels WHERE id = ?", channel_id)
 
-	var channel struct {
-		Name    string
-		Members []string
-	}
+	var channel Channel
 
 	if err := row.Scan(&channel.Name); err != nil {
 		return &http_status{410, err.Error()}
@@ -115,22 +105,17 @@ func endpoint_channels(writer http.ResponseWriter, request *http.Request) *http_
 		channel.Members = append(channel.Members, person)
 	}
 
-	buffer, err := json.Marshal(channel)
-
-	if err != nil {
-		return &http_status{500, err.Error()}
-	}
-
-	writer.Header().Set("Content-Type", "application/json")
-	writer.Write(buffer)
-
-	return nil
+	return &http_status{200, channel}
 }
 
-func endpoint_channels_without_parameter(subject string, writer http.ResponseWriter, request *http.Request) *http_status {
+func endpoint_channels_without_parameter(subject string, request *http.Request) *http_status {
 	switch request.Method {
 	case "GET":
 		rows, err := db.Query("SELECT id, name FROM memberships, channels WHERE person = ? AND channel = id", subject)
+
+		if err != nil {
+			return &http_status{500, err.Error()}
+		}
 
 		var channel Channel
 
@@ -144,16 +129,7 @@ func endpoint_channels_without_parameter(subject string, writer http.ResponseWri
 			channels = append(channels, channel)
 		}
 
-		buffer, err := json.Marshal(channels)
-
-		if err != nil {
-			return &http_status{500, err.Error()}
-		}
-
-		writer.Header().Set("Content-Type", "application/json")
-		writer.Write(buffer)
-
-		return nil
+		return &http_status{200, channels}
 	case "POST":
 		tx, err := db.Begin()
 
@@ -161,45 +137,33 @@ func endpoint_channels_without_parameter(subject string, writer http.ResponseWri
 			return &http_status{500, err.Error()}
 		}
 
-		var channel_info struct {
-			Name    string
-			Members []string
-		}
+		var channel Channel
 
-		if request.Header.Get("Content-Type") != "application/json" {
-			return &http_status{415, "bad content type"}
-		}
-
-		buffer, err := ioutil.ReadAll(request.Body)
+		err = decode_payload(request, &channel)
 
 		if err != nil {
-			return &http_status{400, "invalid content stream"}
+			return &http_status{400, err.Error()}
 		}
 
-		request.Body.Close()
-
-		if json.Unmarshal(buffer, &channel_info) != nil {
-			return &http_status{400, "corrupt content format"}
-		}
-
-		result, err := tx.Exec("INSERT INTO channels (name) VALUES (?)", channel_info.Name)
+		result, err := tx.Exec("INSERT INTO channels (name) VALUES (?)", channel.Name)
 
 		if err != nil {
 			tx.Rollback()
 			return &http_status{500, err.Error()}
 		}
 
-		channel_id, err := result.LastInsertId()
+		last_insert_id, err := result.LastInsertId()
+		channel.Id = int(last_insert_id)
 
 		if err != nil {
 			tx.Rollback()
 			return &http_status{500, err.Error()}
 		}
 
-		channel_info.Members = append(channel_info.Members, subject)
+		channel.Members = append(channel.Members, subject)
 
-		for _, person_id := range channel_info.Members {
-			if _, err = tx.Exec("INSERT INTO memberships (person, channel) VALUES (?, ?)", person_id, channel_id); err != nil {
+		for _, person_id := range channel.Members {
+			if _, err = tx.Exec("INSERT INTO memberships (person, channel) VALUES (?, ?)", person_id, channel.Id); err != nil {
 				tx.Rollback()
 				return &http_status{500, err.Error()}
 			}
@@ -209,11 +173,9 @@ func endpoint_channels_without_parameter(subject string, writer http.ResponseWri
 			return &http_status{500, err.Error()}
 		}
 
-		message_server.listeners.Publish(int64(channel_id), &Message{IsEvent: 1, Content: "join"})
+		hub.Publish(channel.Id, &Message{IsEvent: 1, Content: "join"})
 
-		fmt.Fprintf(writer, "%d", channel_id)
-
-		return nil
+		return &http_status{200, channel}
 	default:
 		return &http_status{405, "method not allowed"}
 	}
