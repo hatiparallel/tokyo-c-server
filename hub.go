@@ -7,19 +7,13 @@ import (
 type Hub struct {
 	mutex     *sync.RWMutex
 	listeners map[chan Message]int
-	stamper   func(int, *Message) error
 }
 
-func NewHub(stamper func(int, *Message) error) *Hub {
+func NewHub() *Hub {
 	return &Hub{
 		new(sync.RWMutex),
 		make(map[chan Message]int),
-		stamper,
 	}
-}
-
-func (hub *Hub) Stamp(channel int, message *Message) error {
-	return hub.stamper(channel, message)
 }
 
 func (hub *Hub) Subscribe(channel int, listener chan Message) {
@@ -31,15 +25,9 @@ func (hub *Hub) Subscribe(channel int, listener chan Message) {
 	return
 }
 
-func (hub *Hub) Publish(channel int, message *Message) (err error) {
+func (hub *Hub) Publish(channel int, message *Message) {
 	hub.mutex.RLock()
 	defer hub.mutex.RUnlock()
-
-	err = hub.Stamp(channel, message)
-
-	if err != nil {
-		return err
-	}
 
 	for listener, _channel := range hub.listeners {
 		if channel == _channel {
