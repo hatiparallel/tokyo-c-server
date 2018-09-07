@@ -47,7 +47,9 @@ JSON messages will be accepted:
 * **POST** /friendships/ takes PIN and sends a request to the owner.
 	* Payload (application/json): PIN code
 * **PUT** /friendships/_person_ makes a friendship from the current user to _person_ (requiring that _person_ send a request with PIN).
+	* Repsponse (application/json): []string
 * **DELETE** /friendships/_person_ dissolves a friendship from the current user to _person_.
+	* Repsponse (application/json): []string
 * **GET** /channels/ gives a channel list the current user is participating in.
 	* Response (application/json): [Channel (data_type.go)](https://github.com/line-school2018summer/tokyo-c-server/blob/973bfbc6a111abb311bbe61610e4d93e16471779/data_types.go#L27)
 * **POST** /channels/ makes a new channel with the only participant being the current user.
