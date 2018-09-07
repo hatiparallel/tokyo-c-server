@@ -39,9 +39,9 @@ JSON messages will be accepted:
 
 * **GET** /messages/_channel_ gives a realtime stream of messages of _channel_.
 	* Parameters: `since_id` specifies a message id from which digging message archive starts.
-	* Response (application/json stream): Refer to [Message (data_types.go)](https://github.com/line-school2018summer/tokyo-c-server/blob/5c05c4d47493a86547a8299e34c99e750a4a6058/data_types.go#L12)
+	* Response (application/json stream): [\[\]Message (data_types.go)](https://github.com/line-school2018summer/tokyo-c-server/blob/973bfbc6a111abb311bbe61610e4d93e16471779/data_types.go#L33)
 * **POST** /messages/_channel_ takes a message and broadcast it on _channel_
-   * Payload (application/json): {IsEvent int; Content string}
+   * Payload (application/json): [Message (data_types.go)](https://github.com/line-school2018summer/tokyo-c-server/blob/973bfbc6a111abb311bbe61610e4d93e16471779/data_types.go#L33)
 * **GET** /friendships/ gives a friend list of the current user.
 	* Repsponse (application/json): []string
 * **POST** /friendships/ takes PIN and sends a request to the owner.
@@ -49,14 +49,14 @@ JSON messages will be accepted:
 * **PUT** /friendships/_person_ makes a friendship from the current user to _person_ (requiring that _person_ send a request with PIN).
 * **DELETE** /friendships/_person_ dissolves a friendship from the current user to _person_.
 * **GET** /channels/ gives a channel list the current user is participating in.
-	* Response (application/json): {Name string; Members []string}
+	* Response (application/json): [Channel (data_type.go)](https://github.com/line-school2018summer/tokyo-c-server/blob/973bfbc6a111abb311bbe61610e4d93e16471779/data_types.go#L27)
 * **POST** /channels/ makes a new channel with the only participant being the current user.
-   * Payload (application/json): {Name string; Members [] string}
+   * Payload (application/json): [Channel (data_type.go)](https://github.com/line-school2018summer/tokyo-c-server/blob/973bfbc6a111abb311bbe61610e4d93e16471779/data_types.go#L27)
 * **PUT** /channels/_channel_/_person_ makes _person_ participate in _channel_ (requiring that the current user be a member).
 * **DELETE** /channels/_channel_/_person_ makes _person_ withdraw from _channel_. (requiring that the current user be a member. the channel will perish if the current user is the last participant).
 * **GET** /pin gives a realtime stream of event messages
-	* Response (application/json stream): {Type string; PIN int; Person string} (Type is `pin` -> `request` or `noop`)
+	* Response (application/json stream): [pin_event (data_types.go)](https://github.com/line-school2018summer/tokyo-c-server/blob/973bfbc6a111abb311bbe61610e4d93e16471779/data_types.go#L21) (Type is `pin` -> `request` or `noop`)
 * **GET** /people/_person_ gives a firebase user info of _person_
-	* Response (application/json): Refer to [firebase/auth.UserInfo](https://godoc.org/firebase.google.com/go/auth#UserInfo)
+	* Response (application/json): Refer to [auth.UserInfo (firebase)](https://godoc.org/firebase.google.com/go/auth#UserInfo)
 * **GET** /status gives the current status of the current user
-	* Response (application/json): {FriendshipCount int; Latests map[int]int}
+	* Response (application/json): [Status (data_types.go)](https://github.com/line-school2018summer/tokyo-c-server/blob/973bfbc6a111abb311bbe61610e4d93e16471779/data_types.go#L42)
