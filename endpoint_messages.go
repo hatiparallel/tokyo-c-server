@@ -5,10 +5,11 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 )
 
 func endpoint_messages(request *http.Request) *http_status {
-	_, err := authenticate(request)
+	subject, err := authenticate(request)
 
 	if err != nil {
 		return &http_status{401, err.Error()}
@@ -78,11 +79,27 @@ func endpoint_messages(request *http.Request) *http_status {
 			return &http_status{400, err.Error()}
 		}
 
-		err = hub.Publish(channel_id, &message)
+		message.Channel = channel_id
+		message.PostedAt = time.Now()
+		message.Author = subject
+
+		result, err := db.Exec(
+			"INSERT INTO messages (channel, author, is_event, posted_at, content) VALUES (?, ?, ?, ?, ?)",
+			channel_id, 0, 0, message.PostedAt, message.Content)
 
 		if err != nil {
-			return &http_status{500, err.Error()}
+			return &http_status{500, "failed to store message because... " + err.Error()}
 		}
+
+		last_insert_id, err := result.LastInsertId()
+
+		if err != nil {
+			return &http_status{500, "failed to get message id"}
+		}
+
+		message.Id = int(last_insert_id)
+
+		hub.Publish(channel_id, &message)
 
 		return &http_status{200, message}
 	default:

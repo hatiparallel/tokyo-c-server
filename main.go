@@ -12,7 +12,6 @@ import (
 	"os"
 	"strconv"
 	"sync"
-	"time"
 
 	"firebase.google.com/go"
 	firebase_auth "firebase.google.com/go/auth"
@@ -46,7 +45,7 @@ func main() {
 
 	flag.Parse()
 
-	hub = NewHub(stamp_message)
+	hub = NewHub()
 
 	pin_table.by_pin = make(map[int]*pin_ticket)
 	pin_table.by_owner = make(map[string]*pin_ticket)
@@ -152,29 +151,6 @@ func decode_payload(request *http.Request, pointer interface{}) error {
 	if err != nil {
 		return errors.New("corrupt content format: " + err.Error())
 	}
-
-	return nil
-}
-
-func stamp_message(channel_id int, message *Message) error {
-	message.Channel = channel_id
-	message.PostedAt = time.Now()
-
-	result, err := db.Exec(
-		"INSERT INTO messages (channel, author, is_event, posted_at, content) VALUES (?, ?, ?, ?, ?)",
-		channel_id, 0, 0, message.PostedAt, message.Content)
-
-	if err != nil {
-		return errors.New("failed to store message because... " + err.Error())
-	}
-
-	last_insert_id, err := result.LastInsertId()
-
-	if err != nil {
-		return errors.New("failed to get message id")
-	}
-
-	message.Id = int(last_insert_id)
 
 	return nil
 }
