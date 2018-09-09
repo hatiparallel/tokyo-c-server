@@ -42,6 +42,29 @@ func endpoint_channels(request *http.Request) *http_status {
 		if person_id != "" {
 			return &http_status{400, "person parameter cannot be specified"}
 		}
+	case "POST":
+		if person_id != "" {
+			return &http_status{400, "person parameter cannot be specified"}
+		}
+
+		var friends []string
+
+		decode_payload(request, &friends)
+
+		tx, err := db.Begin()
+
+		if err != nil {
+			return &http_status{500, err.Error()}
+		}
+
+		for _, person_id := range friends {
+			if _, err := db.Exec("INSERT INTO memberships (channel, person) VALUES (?, ?)", channel_id, person_id); err != nil {
+				tx.Rollback()
+				return &http_status{500, err.Error()}
+			}
+		}
+
+		tx.Commit()
 	case "PUT":
 		if _, err := db.Exec("INSERT INTO memberships (channel, person) VALUES (?, ?)", channel_id, person_id); err != nil {
 			return &http_status{500, err.Error()}
@@ -91,7 +114,9 @@ func endpoint_channels(request *http.Request) *http_status {
 			}
 		}
 
-		tx.Commit()
+		if err = tx.Commit(); err != nil {
+			return &http_status{500, err.Error()}
+		}
 	default:
 		return &http_status{405, "method not allowed"}
 	}
