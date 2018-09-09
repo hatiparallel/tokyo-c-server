@@ -12,6 +12,7 @@ import (
 	"os"
 	"strconv"
 	"sync"
+	"time"
 
 	"firebase.google.com/go"
 	firebase_auth "firebase.google.com/go/auth"
@@ -151,6 +152,28 @@ func decode_payload(request *http.Request, pointer interface{}) error {
 	if err != nil {
 		return errors.New("corrupt content format: " + err.Error())
 	}
+
+	return nil
+}
+
+func stamp_message(message *Message) error {
+	message.PostedAt = time.Now()
+
+	result, err := db.Exec(
+		"INSERT INTO messages (channel, author, is_event, posted_at, content) VALUES (?, ?, ?, ?, ?)",
+		message.Channel, 0, 0, message.PostedAt, message.Content)
+
+	if err != nil {
+		return err
+	}
+
+	last_insert_id, err := result.LastInsertId()
+
+	if err != nil {
+		return err
+	}
+
+	message.Id = int(last_insert_id)
 
 	return nil
 }
