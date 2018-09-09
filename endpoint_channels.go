@@ -47,13 +47,29 @@ func endpoint_channels(request *http.Request) *http_status {
 			return &http_status{500, err.Error()}
 		}
 
-		hub.Publish(channel_id, &Message{IsEvent: 1, Content: "join"})
+		event := Message{
+			Channel: channel_id,
+			Author:  person_id,
+			IsEvent: 1,
+			Content: "join",
+		}
+
+		stamp_message(&event)
+		hub.Publish(channel_id, event)
 	case "DELETE":
 		if _, err := db.Exec("DELETE FROM memberships WHERE channel = ? AND person = ?", channel_id, person_id); err != nil {
 			return &http_status{500, err.Error()}
 		}
 
-		hub.Publish(channel_id, &Message{IsEvent: 1, Content: "leave"})
+		event := Message{
+			Channel: channel_id,
+			Author:  person_id,
+			IsEvent: 1,
+			Content: "leave",
+		}
+
+		stamp_message(&event)
+		hub.Publish(channel_id, event)
 
 		tx, err := db.Begin()
 
@@ -167,13 +183,21 @@ func endpoint_channels_without_parameter(subject string, request *http.Request) 
 				tx.Rollback()
 				return &http_status{500, err.Error()}
 			}
+
+			event := Message{
+				Channel: channel.Id,
+				Author:  person_id,
+				IsEvent: 1,
+				Content: "join",
+			}
+
+			stamp_message(&event)
+			hub.Publish(channel.Id, event)
 		}
 
 		if err := tx.Commit(); err != nil {
 			return &http_status{500, err.Error()}
 		}
-
-		hub.Publish(channel.Id, &Message{IsEvent: 1, Content: "join"})
 
 		return &http_status{200, channel}
 	default:

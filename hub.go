@@ -25,13 +25,13 @@ func (hub *Hub) Subscribe(channel int, listener chan Message) {
 	return
 }
 
-func (hub *Hub) Publish(channel int, message *Message) {
+func (hub *Hub) Publish(channel int, message Message) {
 	hub.mutex.RLock()
 	defer hub.mutex.RUnlock()
 
 	for listener, _channel := range hub.listeners {
 		if channel == _channel {
-			listener <- *message
+			listener <- message
 		}
 	}
 
