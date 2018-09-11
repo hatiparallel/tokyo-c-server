@@ -40,9 +40,9 @@ type Message struct {
 }
 
 type Summary struct {
-	ChannelId int
+	ChannelId   int
 	ChannelName string
-	MessageId int
+	MessageId   int
 }
 
 type Status struct {

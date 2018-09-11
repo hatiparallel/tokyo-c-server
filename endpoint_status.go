@@ -22,7 +22,7 @@ func endpoint_status(request *http.Request) *http_status {
 	}
 
 	var (
-		status Status
+		status  Status
 		summary Summary
 	)
 
