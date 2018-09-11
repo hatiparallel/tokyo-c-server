@@ -12,9 +12,9 @@ func endpoint_status(request *http.Request) *http_status {
 	}
 
 	rows, err := db.Query(`
-		SELECT channel.id channel, channel.name, MAX(messages.id)
+		SELECT channels.id, channels.name, MAX(messages.id)
 		FROM channels, memberships, messages
-		WHERE memberships.person = ? AND memberships.channel = channel AND messages.channel = channel
+		WHERE memberships.person = ? AND memberships.channel = channels.id AND messages.channel = channels.id
 		GROUP BY memberships.channel`, subject)
 
 	if err != nil {
@@ -26,7 +26,7 @@ func endpoint_status(request *http.Request) *http_status {
 		summary Summary
 	)
 
-	status.Latests = make([]Summary, 16)
+	status.Latests = make([]Summary, 0)
 
 	for rows.Next() {
 		if err := rows.Scan(&summary.ChannelId, &summary.ChannelName, &summary.MessageId); err != nil {
