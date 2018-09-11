@@ -11,24 +11,29 @@ func endpoint_status(request *http.Request) *http_status {
 		return &http_status{401, err.Error()}
 	}
 
-	rows, err := db.Query("SELECT memberships.channel, MAX(id) FROM memberships, messages WHERE person = ? AND memberships.channel = messages.channel GROUP BY memberships.channel", subject)
+	rows, err := db.Query(`
+		SELECT channel.id channel, channel.name, MAX(messages.id)
+		FROM channels, memberships, messages
+		WHERE memberships.person = ? AND memberships.channel = channel AND messages.channel = channel
+		GROUP BY memberships.channel`, subject)
 
 	if err != nil {
 		return &http_status{500, err.Error()}
 	}
 
-	var status Status
+	var (
+		status Status
+		summary Summary
+	)
 
-	status.Latests = make(map[int]int)
+	status.Latests = make([]Summary, 16)
 
 	for rows.Next() {
-		var channel, latest_id int
-
-		if err := rows.Scan(&channel, &latest_id); err != nil {
+		if err := rows.Scan(&summary.ChannelId, &summary.ChannelName, &summary.MessageId); err != nil {
 			return &http_status{500, err.Error()}
 		}
 
-		status.Latests[channel] = latest_id
+		status.Latests = append(status.Latests, summary)
 	}
 
 	row := db.QueryRow("SELECT COUNT(*) FROM friendships WHERE person_0 = ? OR person_1 = ?", subject, subject)
