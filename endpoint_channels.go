@@ -123,7 +123,9 @@ func endpoint_channels(request *http.Request) *http_status {
 			return &http_status{500, err.Error()}
 		}
 
-		return &http_status{410, err.Error()}
+		if size == 0 {
+			return &http_status{410, "channel deleted"}
+		}
 	default:
 		return &http_status{405, "method not allowed"}
 	}
