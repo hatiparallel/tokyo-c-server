@@ -64,21 +64,26 @@ func endpoint_channels(request *http.Request) *http_status {
 			}
 		}
 
-		tx.Commit()
+		if err = tx.Commit(); err != nil {
+			return &http_status{500, err.Error()}
+		}
+
+		for _, person_id := range friends {
+			event := Message{
+				Channel: channel_id,
+				Author:  person_id,
+				IsEvent: 1,
+				Content: "join",
+			}
+
+			stamp_message(&event)
+			hub.Publish(channel_id, event)
+		}
 	case "PUT":
 		if _, err := db.Exec("INSERT INTO memberships (channel, person) VALUES (?, ?)", channel_id, person_id); err != nil {
 			return &http_status{500, err.Error()}
 		}
 
-		event := Message{
-			Channel: channel_id,
-			Author:  person_id,
-			IsEvent: 1,
-			Content: "join",
-		}
-
-		stamp_message(&event)
-		hub.Publish(channel_id, event)
 	case "DELETE":
 		if _, err := db.Exec("DELETE FROM memberships WHERE channel = ? AND person = ?", channel_id, person_id); err != nil {
 			return &http_status{500, err.Error()}
@@ -117,6 +122,8 @@ func endpoint_channels(request *http.Request) *http_status {
 		if err = tx.Commit(); err != nil {
 			return &http_status{500, err.Error()}
 		}
+
+		return &http_status{410, err.Error()}
 	default:
 		return &http_status{405, "method not allowed"}
 	}
@@ -126,7 +133,7 @@ func endpoint_channels(request *http.Request) *http_status {
 	var channel Channel
 
 	if err := row.Scan(&channel.Name); err != nil {
-		return &http_status{410, err.Error()}
+		return &http_status{500, err.Error()}
 	}
 
 	rows, err := db.Query("SELECT person FROM memberships WHERE channel = ?", channel_id)
@@ -208,7 +215,13 @@ func endpoint_channels_without_parameter(subject string, request *http.Request) 
 				tx.Rollback()
 				return &http_status{500, err.Error()}
 			}
+		}
 
+		if err := tx.Commit(); err != nil {
+			return &http_status{500, err.Error()}
+		}
+
+		for _, person_id := range channel.Members {
 			event := Message{
 				Channel: channel.Id,
 				Author:  person_id,
@@ -218,10 +231,6 @@ func endpoint_channels_without_parameter(subject string, request *http.Request) 
 
 			stamp_message(&event)
 			hub.Publish(channel.Id, event)
-		}
-
-		if err := tx.Commit(); err != nil {
-			return &http_status{500, err.Error()}
 		}
 
 		return &http_status{200, channel}
