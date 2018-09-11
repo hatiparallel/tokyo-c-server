@@ -39,7 +39,13 @@ type Message struct {
 	Content  string
 }
 
+type Summary struct {
+	ChannelId int
+	ChannelName string
+	MessageId int
+}
+
 type Status struct {
 	FriendshipCount int
-	Latests         map[int]int
+	Latests         []Summary
 }
