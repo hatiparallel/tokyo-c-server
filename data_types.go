@@ -18,7 +18,7 @@ type pin_ticket struct {
 	mutex    *sync.Mutex
 }
 
-type pin_event struct {
+type PINEvent struct {
 	Type   string
 	PIN    int
 	Person string
