@@ -50,9 +50,7 @@ Execute `./start-server`
    		* `channel` specifies a channel which you want to listen.
 		* `since_id` (optional) specifies a message id from which digging message archive starts.
 	* Response (application/json stream): \[\][Message (data_types.go)](https://github.com/line-school2018summer/tokyo-c-server/blob/6dbe5771233705e67d86721610ddffbf732424d3/data_types.go#L33)
-* **POST** /messages takes a message and broadcast it on _channel_
-	* Parameters
-		* `channel` specifies a channel which you want to send to.
+* **POST** /messages takes a message and broadcast it.
 	* Payload (application/json): [Message (data_types.go)](https://github.com/line-school2018summer/tokyo-c-server/blob/6dbe5771233705e67d86721610ddffbf732424d3/data_types.go#L33)
 
 ### /messages/*
