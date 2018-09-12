@@ -32,17 +32,17 @@ func endpoint_pin(request *http.Request) *http_status {
 		return &http_status{200, func(encoder *json.Encoder) {
 			ticker := time.Tick(3 * time.Second)
 
-			encoder.Encode(&pin_event{"pin", ticket.pin, ""})
+			encoder.Encode(&PINEvent{"pin", ticket.pin, ""})
 
 		LOOP:
 			for {
 				select {
 				case <-ticker:
-					if encoder.Encode(&pin_event{"noop", 0, ""}) != nil {
+					if encoder.Encode(&PINEvent{"noop", 0, ""}) != nil {
 						break LOOP
 					}
 				case person_id := <-ticket.channel:
-					if encoder.Encode(&pin_event{"request", 0, person_id}) != nil {
+					if encoder.Encode(&PINEvent{"request", 0, person_id}) != nil {
 						break LOOP
 					}
 				}

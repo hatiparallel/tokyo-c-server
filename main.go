@@ -3,16 +3,13 @@ package main
 import (
 	"database/sql"
 	"encoding/json"
-	"errors"
 	"flag"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"strconv"
 	"sync"
-	"time"
 
 	"firebase.google.com/go"
 	firebase_auth "firebase.google.com/go/auth"
@@ -26,6 +23,17 @@ var pin_table struct {
 	by_pin   map[int]*pin_ticket
 	by_owner map[string]*pin_ticket
 	mutex    *sync.Mutex
+}
+
+type immediate_writer struct {
+	writer  io.Writer
+	flusher http.Flusher
+}
+
+func (iw *immediate_writer) Write(b []byte) (n int, err error) {
+	n, err = iw.writer.Write(b)
+	iw.flusher.Flush()
+	return
 }
 
 var hub *Hub
@@ -77,9 +85,12 @@ func main() {
 		"/": func(_ *http.Request) *http_status {
 			return &http_status{200, "Hello, this is Tokyo C Server."}
 		},
-		"/friendships/": endpoint_friendships,
-		"/channels/":    endpoint_channels,
-		"/messages/":    endpoint_messages,
+		"/friendships":  endpoint_friendships,
+		"/friendships/": endpoint_friendships_with_parameters,
+		"/channels":     endpoint_channels,
+		"/channels/":    endpoint_channels_with_parameters,
+		"/messages":     endpoint_messages,
+		"/messages/":    endpoint_messages_with_parameters,
 		"/people/":      endpoint_people,
 		"/pin":          endpoint_pin,
 		"/status":       endpoint_status,
@@ -132,59 +143,4 @@ func build_handler(handler func(*http.Request) *http_status) func(http.ResponseW
 			json.NewEncoder(writer).Encode(status.body)
 		}
 	}
-}
-
-func decode_payload(request *http.Request, pointer interface{}) error {
-	if request.Header.Get("Content-Type") != "application/json" {
-		return errors.New("bad content type")
-	}
-
-	buffer, err := ioutil.ReadAll(request.Body)
-
-	if err != nil {
-		return errors.New("invalid content stream: " + err.Error())
-	}
-
-	request.Body.Close()
-
-	err = json.Unmarshal(buffer, pointer)
-
-	if err != nil {
-		return errors.New("corrupt content format: " + err.Error())
-	}
-
-	return nil
-}
-
-func stamp_message(message *Message) error {
-	message.PostedAt = time.Now()
-
-	result, err := db.Exec(
-		"INSERT INTO messages (channel, author, is_event, posted_at, content) VALUES (?, ?, ?, ?, ?)",
-		message.Channel, 0, 0, message.PostedAt, message.Content)
-
-	if err != nil {
-		return err
-	}
-
-	last_insert_id, err := result.LastInsertId()
-
-	if err != nil {
-		return err
-	}
-
-	message.Id = int(last_insert_id)
-
-	return nil
-}
-
-type immediate_writer struct {
-	writer  io.Writer
-	flusher http.Flusher
-}
-
-func (iw *immediate_writer) Write(b []byte) (n int, err error) {
-	n, err = iw.writer.Write(b)
-	iw.flusher.Flush()
-	return
 }

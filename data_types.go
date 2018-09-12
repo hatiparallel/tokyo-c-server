@@ -18,7 +18,7 @@ type pin_ticket struct {
 	mutex    *sync.Mutex
 }
 
-type pin_event struct {
+type PINEvent struct {
 	Type   string
 	PIN    int
 	Person string
@@ -39,7 +39,13 @@ type Message struct {
 	Content  string
 }
 
+type Summary struct {
+	ChannelId   int
+	ChannelName string
+	MessageId   int
+}
+
 type Status struct {
 	FriendshipCount int
-	Latests         map[int]int
+	Latests         []Summary
 }

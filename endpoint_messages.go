@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"net/http"
 	"strconv"
-	"strings"
 )
 
 func endpoint_messages(request *http.Request) *http_status {
@@ -14,61 +13,48 @@ func endpoint_messages(request *http.Request) *http_status {
 		return &http_status{401, err.Error()}
 	}
 
-	channel_id, err := strconv.Atoi(strings.TrimPrefix(request.URL.Path, "/messages/"))
-
-	if err != nil {
-		return &http_status{400, "invalid channel id"}
-	}
-
 	switch request.Method {
 	case "GET":
-		since_id, _ := strconv.Atoi(request.FormValue("since_id"))
+		channel_id, err := strconv.Atoi(request.FormValue("channel"))
 
-		if since_id > 0 {
-			rows, err := db.Query("SELECT id, channel, author, is_event, posted_at, content FROM messages WHERE channel = ? AND id > ?", channel_id, since_id)
+		if err != nil {
+			return &http_status{400, err.Error()}
+		}
 
-			if err != nil {
-				return &http_status{500, err.Error()}
+		if db.QueryRow("SELECT person FROM memberships WHERE channel = ? AND person = ?", channel_id, subject).Scan(&subject) != nil {
+			return &http_status{403, "not a member"}
+		}
+
+		return &http_status{200, func(encoder *json.Encoder) {
+			var message Message
+
+			since_id, err := strconv.Atoi(request.FormValue("since_id"))
+
+			if err == nil {
+				rows, err := db.Query("SELECT id, channel, author, is_event, posted_at, content FROM messages WHERE channel = ? AND id > ?", channel_id, since_id)
+
+				if err == nil {
+					for rows.Next() {
+						if rows.Scan(&message.Id, &message.Channel, &message.Author, &message.IsEvent, &message.PostedAt, &message.Content) != nil {
+							break
+						}
+
+						encoder.Encode(message)
+					}
+				}
 			}
 
-			return &http_status{200, func(encoder *json.Encoder) {
-				var message Message
+			listener := make(chan Message)
 
-				for rows.Next() {
-					if rows.Scan(&message.Id, &message.Channel, &message.Author, &message.IsEvent, &message.PostedAt, &message.Content) != nil {
-						break
-					}
+			hub.Subscribe(channel_id, listener)
+			defer hub.Unsubscribe(listener)
 
-					encoder.Encode(message)
+			for {
+				if encoder.Encode(<-listener) != nil {
+					break
 				}
-
-				rows.Close()
-
-				listener := make(chan Message)
-
-				hub.Subscribe(channel_id, listener)
-				defer hub.Unsubscribe(listener)
-
-				for {
-					if encoder.Encode(<-listener) != nil {
-						break
-					}
-				}
-			}}
-		} else {
-			return &http_status{200, func(encoder *json.Encoder) {
-				listener := make(chan Message)
-
-				hub.Subscribe(channel_id, listener)
-				defer hub.Unsubscribe(listener)
-
-				for {
-					if encoder.Encode(<-listener) != nil {
-						break
-					}
-				}
-			}}
-		}
+			}
+		}}
 	case "POST":
 		var message Message
 
@@ -78,7 +64,10 @@ func endpoint_messages(request *http.Request) *http_status {
 			return &http_status{400, err.Error()}
 		}
 
-		message.Channel = channel_id
+		if db.QueryRow("SELECT person FROM memberships WHERE channel = ? AND person = ?", message.Channel, subject).Scan(&subject) != nil {
+			return &http_status{403, "not a member"}
+		}
+
 		message.Author = subject
 
 		err = stamp_message(&message)
@@ -87,7 +76,42 @@ func endpoint_messages(request *http.Request) *http_status {
 			return &http_status{500, "stamp failed: " + err.Error()}
 		}
 
-		hub.Publish(channel_id, message)
+		hub.Publish(message.Channel, message)
+
+		return &http_status{200, message}
+	default:
+		return &http_status{405, "method not allowed"}
+	}
+}
+
+func endpoint_messages_with_parameters(request *http.Request) *http_status {
+	subject, err := authenticate(request)
+
+	if err != nil {
+		return &http_status{401, err.Error()}
+	}
+
+	var message_id int
+
+	err = match(request.URL.Path, "/messages/([0-9]+)", &message_id)
+
+	if err != nil {
+		return &http_status{400, err.Error()}
+	}
+
+	switch request.Method {
+	case "GET":
+		var message Message
+
+		row := db.QueryRow(`
+			SELECT id, channel, author, is_event, posted_at, content
+			FROM messages
+			WHERE id = ? AND channel IN (SELECT channel FROM memberships WHERE person = ?)`, message_id, subject)
+		err := row.Scan(&message.Id, &message.Channel, &message.Author, &message.IsEvent, &message.PostedAt, &message.Content)
+
+		if err != nil {
+			return &http_status{500, err.Error()}
+		}
 
 		return &http_status{200, message}
 	default:

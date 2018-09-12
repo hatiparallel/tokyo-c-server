@@ -2,7 +2,6 @@ package main
 
 import (
 	"net/http"
-	"strings"
 
 	"golang.org/x/net/context"
 )
@@ -14,9 +13,15 @@ func endpoint_people(request *http.Request) *http_status {
 		return &http_status{401, err.Error()}
 	}
 
-	parameter := strings.TrimPrefix(request.URL.Path, "/people/")
+	var person_id string
 
-	record, err := idp.GetUser(context.Background(), parameter)
+	err = match(request.URL.Path, "/people/([^/]+)", &person_id)
+
+	if err != nil {
+		return &http_status{400, err.Error()}
+	}
+
+	record, err := idp.GetUser(context.Background(), person_id)
 
 	if err != nil {
 		return &http_status{500, "firebase failed: " + err.Error()}
