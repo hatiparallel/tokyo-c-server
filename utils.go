@@ -95,7 +95,7 @@ func stamp_message(message *Message) error {
 
 	result, err := db.Exec(
 		"INSERT INTO messages (channel, author, is_event, posted_at, content) VALUES (?, ?, ?, ?, ?)",
-		message.Channel, 0, 0, message.PostedAt, message.Content)
+		message.Channel, message.Author, message.IsEvent, message.PostedAt, message.Content)
 
 	if err != nil {
 		return err
