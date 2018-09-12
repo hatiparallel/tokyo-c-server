@@ -2,8 +2,6 @@ package main
 
 import (
 	"net/http"
-	"strconv"
-	"strings"
 )
 
 func endpoint_channels(request *http.Request) *http_status {
@@ -13,27 +11,107 @@ func endpoint_channels(request *http.Request) *http_status {
 		return &http_status{401, err.Error()}
 	}
 
-	parameter := strings.TrimPrefix(request.URL.Path, "/channels/")
+	switch request.Method {
+	case "GET":
+		rows, err := db.Query("SELECT id, name FROM memberships, channels WHERE person = ? AND channel = id", subject)
 
-	if parameter == "" {
-		return endpoint_channels_without_parameter(subject, request)
+		if err != nil {
+			return &http_status{500, err.Error()}
+		}
+
+		var channel Channel
+
+		channels := make([]Channel, 0, 16)
+
+		for rows.Next() {
+			if err := rows.Scan(&channel.Id, &channel.Name); err != nil {
+				return &http_status{500, err.Error()}
+			}
+
+			channels = append(channels, channel)
+		}
+
+		return &http_status{200, channels}
+	case "POST":
+		tx, err := db.Begin()
+
+		if err != nil {
+			return &http_status{500, err.Error()}
+		}
+
+		var channel Channel
+
+		err = decode_payload(request, &channel)
+
+		if err != nil {
+			return &http_status{400, err.Error()}
+		}
+
+		result, err := tx.Exec("INSERT INTO channels (name) VALUES (?)", channel.Name)
+
+		if err != nil {
+			tx.Rollback()
+			return &http_status{500, err.Error()}
+		}
+
+		last_insert_id, err := result.LastInsertId()
+		channel.Id = int(last_insert_id)
+
+		if err != nil {
+			tx.Rollback()
+			return &http_status{500, err.Error()}
+		}
+
+		channel.Members = append(channel.Members, subject)
+
+		for _, person_id := range channel.Members {
+			if _, err = tx.Exec("INSERT INTO memberships (person, channel) VALUES (?, ?)", person_id, channel.Id); err != nil {
+				tx.Rollback()
+				return &http_status{500, err.Error()}
+			}
+		}
+
+		if err := tx.Commit(); err != nil {
+			return &http_status{500, err.Error()}
+		}
+
+		for _, person_id := range channel.Members {
+			event := Message{
+				Channel: channel.Id,
+				Author:  person_id,
+				IsEvent: 1,
+				Content: "join",
+			}
+
+			stamp_message(&event)
+			hub.Publish(channel.Id, event)
+		}
+
+		return &http_status{200, channel}
+	default:
+		return &http_status{405, "method not allowed"}
 	}
+}
 
-	parameter_splited := strings.SplitN(parameter, "/", 2)
-
-	if len(parameter_splited) < 2 {
-		parameter_splited = append(parameter_splited, "")
-	}
-
-	channel_id, err := strconv.Atoi(parameter_splited[0])
+func endpoint_channels_with_parameters(request *http.Request) *http_status {
+	subject, err := authenticate(request)
 
 	if err != nil {
-		return &http_status{400, "failed to parse channel id"}
+		return &http_status{401, err.Error()}
 	}
 
-	person_id := parameter_splited[1]
+	var (
+		channel_id int
+		person_id  string
+	)
 
-	if db.QueryRow("SELECT person FROM memberships WHERE person = ?", subject).Scan(&subject) != nil {
+	err = match(request.URL.Path, "/channels/([0-9]+)(?:/([^/]+))?", &channel_id, &person_id)
+
+	if err != nil {
+		return &http_status{400, err.Error()}
+	}
+
+	if db.QueryRow("SELECT person FROM memberships WHERE channel = ? AND person = ?", channel_id, subject).Scan(&subject) != nil {
 		return &http_status{403, "not a member"}
 	}
 
@@ -156,87 +234,4 @@ func endpoint_channels(request *http.Request) *http_status {
 	}
 
 	return &http_status{200, channel}
-}
-
-func endpoint_channels_without_parameter(subject string, request *http.Request) *http_status {
-	switch request.Method {
-	case "GET":
-		rows, err := db.Query("SELECT id, name FROM memberships, channels WHERE person = ? AND channel = id", subject)
-
-		if err != nil {
-			return &http_status{500, err.Error()}
-		}
-
-		var channel Channel
-
-		channels := make([]Channel, 0, 16)
-
-		for rows.Next() {
-			if err := rows.Scan(&channel.Id, &channel.Name); err != nil {
-				return &http_status{500, err.Error()}
-			}
-
-			channels = append(channels, channel)
-		}
-
-		return &http_status{200, channels}
-	case "POST":
-		tx, err := db.Begin()
-
-		if err != nil {
-			return &http_status{500, err.Error()}
-		}
-
-		var channel Channel
-
-		err = decode_payload(request, &channel)
-
-		if err != nil {
-			return &http_status{400, err.Error()}
-		}
-
-		result, err := tx.Exec("INSERT INTO channels (name) VALUES (?)", channel.Name)
-
-		if err != nil {
-			tx.Rollback()
-			return &http_status{500, err.Error()}
-		}
-
-		last_insert_id, err := result.LastInsertId()
-		channel.Id = int(last_insert_id)
-
-		if err != nil {
-			tx.Rollback()
-			return &http_status{500, err.Error()}
-		}
-
-		channel.Members = append(channel.Members, subject)
-
-		for _, person_id := range channel.Members {
-			if _, err = tx.Exec("INSERT INTO memberships (person, channel) VALUES (?, ?)", person_id, channel.Id); err != nil {
-				tx.Rollback()
-				return &http_status{500, err.Error()}
-			}
-		}
-
-		if err := tx.Commit(); err != nil {
-			return &http_status{500, err.Error()}
-		}
-
-		for _, person_id := range channel.Members {
-			event := Message{
-				Channel: channel.Id,
-				Author:  person_id,
-				IsEvent: 1,
-				Content: "join",
-			}
-
-			stamp_message(&event)
-			hub.Publish(channel.Id, event)
-		}
-
-		return &http_status{200, channel}
-	default:
-		return &http_status{405, "method not allowed"}
-	}
 }
