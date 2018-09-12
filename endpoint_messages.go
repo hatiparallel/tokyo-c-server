@@ -13,18 +13,18 @@ func endpoint_messages(request *http.Request) *http_status {
 		return &http_status{401, err.Error()}
 	}
 
-	channel_id, err := strconv.Atoi(request.FormValue("channel"))
-
-	if err != nil {
-		return &http_status{400, err.Error()}
-	}
-
-	if db.QueryRow("SELECT person FROM memberships WHERE channel = ? AND person = ?", channel_id, subject).Scan(&subject) != nil {
-		return &http_status{403, "not a member"}
-	}
-
 	switch request.Method {
 	case "GET":
+		channel_id, err := strconv.Atoi(request.FormValue("channel"))
+
+		if err != nil {
+			return &http_status{400, err.Error()}
+		}
+
+		if db.QueryRow("SELECT person FROM memberships WHERE channel = ? AND person = ?", channel_id, subject).Scan(&subject) != nil {
+			return &http_status{403, "not a member"}
+		}
+
 		return &http_status{200, func(encoder *json.Encoder) {
 			var message Message
 
@@ -64,7 +64,10 @@ func endpoint_messages(request *http.Request) *http_status {
 			return &http_status{400, err.Error()}
 		}
 
-		message.Channel = channel_id
+		if db.QueryRow("SELECT person FROM memberships WHERE channel = ? AND person = ?", message.Channel, subject).Scan(&subject) != nil {
+			return &http_status{403, "not a member"}
+		}
+
 		message.Author = subject
 
 		err = stamp_message(&message)
@@ -73,7 +76,7 @@ func endpoint_messages(request *http.Request) *http_status {
 			return &http_status{500, "stamp failed: " + err.Error()}
 		}
 
-		hub.Publish(channel_id, message)
+		hub.Publish(message.Channel, message)
 
 		return &http_status{200, message}
 	default:
