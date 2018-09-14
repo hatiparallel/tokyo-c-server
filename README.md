@@ -75,24 +75,26 @@ Execute `./start-server`
 ### /channels
 
 * **GET** /channels gives a channel list the current user is participating in.
-	* Response (application/json): [Channel (data_type.go)](https://github.com/line-school2018summer/tokyo-c-server/blob/6dbe5771233705e67d86721610ddffbf732424d3/data_types.go#L27)
+	* Response (application/json): [Channel (data_type.go)](https://github.com/line-school2018summer/tokyo-c-server/blob/e43d2eeea6eb0270ec11d93c037d159f6ab837da/data_types.go#L27)
 * **POST** /channels makes a new channel with the only participant being the current user.
-   * Payload (application/json): [Channel (data_type.go)](https://github.com/line-school2018summer/tokyo-c-server/blob/6dbe5771233705e67d86721610ddffbf732424d3/data_types.go#L27)
+   * Payload (application/json): [Channel (data_type.go)](https://github.com/line-school2018summer/tokyo-c-server/blob/e43d2eeea6eb0270ec11d93c037d159f6ab837da/data_types.go#L27)
 
 ### /channels/*
 
 * **POST** /channels/_channel_/_person_ performs a bulk invitation.
 	* Payload (application/json): []string
-	* Response (application/json): [Channel (data_type.go)](https://github.com/line-school2018summer/tokyo-c-server/blob/6dbe5771233705e67d86721610ddffbf732424d3/data_types.go#L27)
+	* Response (application/json): [Channel (data_type.go)](https://github.com/line-school2018summer/tokyo-c-server/blob/e43d2eeea6eb0270ec11d93c037d159f6ab837da/data_types.go#L27)
 * **PUT** /channels/_channel_/_person_ makes _person_ participate in _channel_ (requiring that the current user be a member).
-	* Response (application/json): [Channel (data_type.go)](https://github.com/line-school2018summer/tokyo-c-server/blob/6dbe5771233705e67d86721610ddffbf732424d3/data_types.go#L27)
+	* Response (application/json): [Channel (data_type.go)](https://github.com/line-school2018summer/tokyo-c-server/blob/e43d2eeea6eb0270ec11d93c037d159f6ab837da/data_types.go#L27)
 * **DELETE** /channels/_channel_/_person_ makes _person_ withdraw from _channel_. (requiring that the current user be a member. the channel will perish if the current user is the last participant).
-	* Response (application/json): [Channel (data_type.go)](https://github.com/line-school2018summer/tokyo-c-server/blob/6dbe5771233705e67d86721610ddffbf732424d3/data_types.go#L27)
+	* Response (application/json): [Channel (data_type.go)](https://github.com/line-school2018summer/tokyo-c-server/blob/e43d2eeea6eb0270ec11d93c037d159f6ab837da/data_types.go#L27)
+* **PATCH** /channels/_channel_ takes a differential data and modifies the information of _channel_.
+	* Payload (application/x-www-form-urlencoded): name (optoinal)
 
 ### /pin
 
 * **GET** /pin gives a realtime stream of event messages
-	* Response (application/json stream): [PINEvent (data_types.go)](https://github.com/line-school2018summer/tokyo-c-server/blob/6dbe5771233705e67d86721610ddffbf732424d3/data_types.go#L21) (Type is `pin` -> `request` or `noop`)
+	* Response (application/json stream): [PINEvent (data_types.go)](https://github.com/line-school2018summer/tokyo-c-server/blob/e43d2eeea6eb0270ec11d93c037d159f6ab837da/data_types.go#L21) (Type is `pin` -> `request` or `noop`)
 
 ### /people/*
 
@@ -102,4 +104,4 @@ Execute `./start-server`
 ### /status
 
 * **GET** /status gives the current status of the current user
-	* Response (application/json): [Status (data_types.go)](https://github.com/line-school2018summer/tokyo-c-server/blob/6dbe5771233705e67d86721610ddffbf732424d3/data_types.go#L48)
+	* Response (application/json): [Status (data_types.go)](https://github.com/line-school2018summer/tokyo-c-server/blob/e43d2eeea6eb0270ec11d93c037d159f6ab837da/data_types.go#L48)
