@@ -87,7 +87,7 @@ func endpoint_friendships_with_parameters(request *http.Request) *http_status {
 
 		delete(ticket.pendings, person_id)
 
-		if _, err := db.Exec("INSERT INTO friendships (person_0, person_1) VALUES (?, ?)", subject, person_id); err != nil {
+		if _, err := db.Exec("INSERT INTO friendships (person_0, person_1, created_at) VALUES (?, ?, NOW())", subject, person_id); err != nil {
 			return &http_status{500, err.Error()}
 		}
 	case "DELETE":
