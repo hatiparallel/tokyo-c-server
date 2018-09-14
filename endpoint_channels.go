@@ -204,6 +204,21 @@ func endpoint_channels_with_parameters(request *http.Request) *http_status {
 		if size == 0 {
 			return &http_status{410, "channel deleted"}
 		}
+	case "PATCH":
+		request.ParseForm()
+
+
+		if _, exists := request.PostForm["name"]; exists {
+			_, err := db.Exec("UPDATE channels SET name = ? WHERE id = ?", request.PostForm.Get("name"), channel_id)
+
+			if err != nil {
+				return &http_status{500, err.Error()}
+			}
+
+			return &http_status{200, "channel name updated"}
+		}
+
+		return &http_status{200, "everything up to date"}
 	default:
 		return &http_status{405, "method not allowed"}
 	}

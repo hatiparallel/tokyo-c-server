@@ -15,7 +15,9 @@ USE ${TOKYO_C_DATABASE_NAME};
 CREATE TABLE friendships (
 	person_0 VARCHAR(256),
 	person_1 VARCHAR(256),
-	UNIQUE(person_0, person_1)
+	created_at DATETIME,
+	UNIQUE(person_0, person_1),
+	INDEX(created_at)
 );
 
 CREATE TABLE messages (
