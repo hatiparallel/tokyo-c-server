@@ -47,5 +47,6 @@ type Summary struct {
 
 type Status struct {
 	FriendshipCount int
+	FriendshipAddedAt time.Time
 	Latests         []Summary
 }
