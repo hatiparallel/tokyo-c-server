@@ -227,6 +227,8 @@ func endpoint_channels_with_parameters(request *http.Request) *http_status {
 
 	var channel Channel
 
+	channel.Id = channel_id
+
 	if err := row.Scan(&channel.Name); err != nil {
 		return &http_status{500, err.Error()}
 	}
