@@ -162,6 +162,15 @@ func endpoint_channels_with_parameters(request *http.Request) *http_status {
 			return &http_status{500, err.Error()}
 		}
 
+		event := Message{
+			Channel: channel_id,
+			Author:  person_id,
+			IsEvent: 1,
+			Content: "join",
+		}
+
+		stamp_message(&event)
+		hub.Publish(channel_id, event)
 	case "DELETE":
 		if _, err := db.Exec("DELETE FROM memberships WHERE channel = ? AND person = ?", channel_id, person_id); err != nil {
 			return &http_status{500, err.Error()}
