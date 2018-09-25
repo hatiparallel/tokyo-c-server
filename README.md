@@ -56,7 +56,7 @@ Execute `./start-server`
 ### /messages/*
 
 * **GET** /messages/_id_ gives a message of _id_.
-	* Response (application/json stream): [Message (data_types.go)](https://github.com/line-school2018summer/tokyo-c-server/blob/6dbe5771233705e67d86721610ddffbf732424d3/data_types.go#L33)
+	* Response (application/json): [Message (data_types.go)](https://github.com/line-school2018summer/tokyo-c-server/blob/6dbe5771233705e67d86721610ddffbf732424d3/data_types.go#L33)
 
 ### /friendships
 
@@ -81,6 +81,8 @@ Execute `./start-server`
 
 ### /channels/*
 
+* **GET** /channels/_channel_ gives details of _channel_
+	* Response (application/json): [Channel (data_type.go)](https://github.com/line-school2018summer/tokyo-c-server/blob/e43d2eeea6eb0270ec11d93c037d159f6ab837da/data_types.go#L27)
 * **POST** /channels/_channel_/_person_ performs a bulk invitation.
 	* Payload (application/json): []string
 	* Response (application/json): [Channel (data_type.go)](https://github.com/line-school2018summer/tokyo-c-server/blob/e43d2eeea6eb0270ec11d93c037d159f6ab837da/data_types.go#L27)
